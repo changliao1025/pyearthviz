@@ -1,1 +1,1 @@
-# earthviz
+# pyearthviz

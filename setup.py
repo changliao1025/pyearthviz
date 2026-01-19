@@ -12,7 +12,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name="earthviz",
+    name="pyearthviz",
     use_scm_version=False,
     version="0.1.0",
     author="Chang Liao",
@@ -20,7 +20,7 @@ setup(
     description="2D visualization and plotting tools for geospatial data",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/changliao1025/earthviz",
+    url="https://github.com/changliao1025/pyearthviz",
     packages=find_packages(exclude=["tests", "tests.*", "docs", "examples"]),
     classifiers=[
         "Development Status :: 3 - Alpha",

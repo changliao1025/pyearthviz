@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "earthviz"
+name = "pyearthviz"
 version = "0.1.0"
 description = "2D visualization and plotting tools for geospatial data"
 readme = "README.md"
@@ -60,10 +60,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/changliao1025/earthviz"
+Homepage = "https://github.com/changliao1025/pyearthviz"
 Documentation = "https://earthviz.readthedocs.io"
-Repository = "https://github.com/changliao1025/earthviz.git"
-Issues = "https://github.com/changliao1025/earthviz/issues"
+Repository = "https://github.com/changliao1025/pyearthviz.git"
+Issues = "https://github.com/changliao1025/pyearthviz/issues"
 
 [tool.setuptools]
 packages = ["earthviz"]
