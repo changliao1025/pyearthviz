@@ -55,7 +55,7 @@ jobs:
       if: "!github.event.release.prerelease"
       env:
         TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.EARTHVIZ_PYPI }}
+        TWINE_PASSWORD: ${{ secrets.PYEARTHVIZ_PYPI }}
       run: |
         twine upload dist/*
 
