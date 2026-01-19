@@ -1,4 +1,4 @@
-name: Upload Earthviz Package to PyPI
+name: Upload pyearthviz Package to PyPI
 
 on:
   release:

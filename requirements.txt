@@ -1,4 +1,4 @@
-# Core dependencies for earthviz
+# Core dependencies for pyearthviz
 numpy>=1.20.0
 matplotlib>=3.3.0
 cartopy>=0.18.0

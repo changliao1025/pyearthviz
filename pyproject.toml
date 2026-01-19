@@ -61,15 +61,15 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/changliao1025/pyearthviz"
-Documentation = "https://earthviz.readthedocs.io"
+Documentation = "https://pyearthviz.readthedocs.io"
 Repository = "https://github.com/changliao1025/pyearthviz.git"
 Issues = "https://github.com/changliao1025/pyearthviz/issues"
 
 [tool.setuptools]
-packages = ["earthviz"]
+packages = ["pyearthviz"]
 
 [tool.setuptools.package-data]
-earthviz = ["py.typed"]
+pyearthviz = ["py.typed"]
 
 [tool.black]
 line-length = 100
@@ -80,7 +80,7 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
-addopts = "-v --cov=earthviz --cov-report=term-missing"
+addopts = "-v --cov=pyearthviz --cov-report=term-missing"
 
 [tool.mypy]
 python_version = "3.8"

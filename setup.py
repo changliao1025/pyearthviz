@@ -1,5 +1,5 @@
 """
-Setup script for earthviz package.
+Setup script for pyearthviz package.
 
 For modern builds, use pyproject.toml.
 This setup.py is maintained for backward compatibility.
