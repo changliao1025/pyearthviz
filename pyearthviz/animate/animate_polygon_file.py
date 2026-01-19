@@ -2,19 +2,16 @@ import os
 import json
 import numpy as np
 from osgeo import osr, gdal, ogr
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.cm as cm
 from matplotlib import animation
 import cartopy.crs as ccrs
-from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 from pyearth.gis.location.get_geometry_coordinates import get_geometry_coordinates
 
 pProjection = ccrs.PlateCarree()  # for latlon data only
 iFigwidth_default = 8
 iFigheight_default = 6
-
 
 def animate_vector_polygon_data(
     sFilename_mesh_in,

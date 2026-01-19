@@ -10,7 +10,6 @@ from pyearthviz.color.create_diverge_rgb_color_hex import (
 
 from pyearth.toolbox.data.list.list_alg import list_max, list_min
 
-
 def ladder_plot_xy_data(
     aX_all,
     aY_all,

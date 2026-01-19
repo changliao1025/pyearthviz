@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from pyearthviz.color.create_diverge_rgb_color_hex import (
     create_diverge_rgb_color_hex,
 )
-from pyearthviz.formatter import log_formatter, MathTextSciFormatter
+from pyearthviz.formatter import MathTextSciFormatter
 
 mpl.rcParams["hatch.linewidth"] = 0.5
 
