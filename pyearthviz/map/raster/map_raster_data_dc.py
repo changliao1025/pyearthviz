@@ -4,11 +4,11 @@ import matplotlib.pyplot as plt
 import cartopy as cpl
 
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
-from pyearth.visual.color.create_diverge_rgb_color_hex import (
+from pyearthviz.color.create_diverge_rgb_color_hex import (
     create_diverge_rgb_color_hex,
 )
 from pyearth.toolbox.data.cgpercentiles import cgpercentiles
-from pyearth.visual.formatter import log_formatter
+from pyearthviz.formatter import log_formatter
 
 pProjection = cpl.crs.PlateCarree()
 

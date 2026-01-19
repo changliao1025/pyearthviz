@@ -3,7 +3,7 @@ from datetime import datetime
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from pyearth.system.define_global_variables import *
+
 
 
 def plot_time_series_data_multiple_temporal_resolution_fill(

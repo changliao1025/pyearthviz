@@ -3,8 +3,8 @@ from datetime import datetime
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from pyearth.system.define_global_variables import *
-from pyearth.visual.calculate_ticks_space import calculate_ticks_space
+
+from pyearthviz.calculate_ticks_space import calculate_ticks_space
 
 
 def plot_time_series_data_monthly_fill(

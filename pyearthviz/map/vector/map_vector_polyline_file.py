@@ -15,14 +15,14 @@ import shapely.geometry as sgeom
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 from pyearth.gis.gdal.gdal_vector_format_support import get_vector_driver_from_filename
 from pyearth.gis.location.get_geometry_coordinates import get_geometry_coordinates
-from pyearth.visual.formatter import OOMFormatter
-from pyearth.visual.map.zebra_frame import zebra_frame
+from pyearthviz.formatter import OOMFormatter
+from pyearthviz.map.zebra_frame import zebra_frame
 from pyearth.toolbox.math.stat.remap import remap
-from pyearth.visual.map.map_servers import (
+from pyearthviz.map.map_servers import (
     calculate_zoom_level,
     calculate_scale_denominator,
 )
-from pyearth.visual.map.map_servers import (
+from pyearthviz.map.map_servers import (
     StadiaStamen,
     EsriTerrain,
     EsriHydro,

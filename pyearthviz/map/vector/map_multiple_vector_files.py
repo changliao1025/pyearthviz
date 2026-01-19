@@ -19,20 +19,20 @@ import cartopy as cpl
 import cartopy.crs as ccrs
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 from pyearth.toolbox.math.stat.remap import remap
-from pyearth.visual.map.zebra_frame import zebra_frame
+from pyearthviz.map.zebra_frame import zebra_frame
 from pyearth.gis.location.get_geometry_coordinates import get_geometry_coordinates
-from pyearth.visual.formatter import OOMFormatter
-from pyearth.visual.map.map_servers import (
+from pyearthviz.formatter import OOMFormatter
+from pyearthviz.map.map_servers import (
     calculate_zoom_level,
     calculate_scale_denominator,
 )
-from pyearth.visual.map.map_servers import (
+from pyearthviz.map.map_servers import (
     StadiaStamen,
     EsriTerrain,
     EsriRelief,
     EsriHydro,
 )
-from pyearth.visual.map.map_servers import (
+from pyearthviz.map.map_servers import (
     Stadia_terrain_images,
     Esri_terrain_images,
     Esri_relief_images,

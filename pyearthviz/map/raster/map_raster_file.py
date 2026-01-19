@@ -9,11 +9,11 @@ import cartopy as cpl
 from osgeo import osr, gdal, ogr
 import cartopy.crs as ccrs
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
-from pyearth.system.define_global_variables import *
+
 from pyearth.toolbox.data.cgpercentiles import cgpercentiles
-from pyearth.visual.formatter import log_formatter
-from pyearth.visual.formatter import OOMFormatter
-from pyearth.visual.map.zebra_frame import zebra_frame
+from pyearthviz.formatter import log_formatter
+from pyearthviz.formatter import OOMFormatter
+from pyearthviz.map.zebra_frame import zebra_frame
 from pyearth.gis.spatialref.reproject_coordinates import reproject_coordinates_batch
 
 pProjection_default = cpl.crs.PlateCarree()

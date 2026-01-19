@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from pyearth.toolbox.data.list.list_alg import list_max, list_min
-from pyearth.visual.scatter.scatter_lowess import scatter_lowess
-from pyearth.visual.color.create_diverge_rgb_color_hex import (
+from pyearthviz.scatter.scatter_lowess import scatter_lowess
+from pyearthviz.color.create_diverge_rgb_color_hex import (
     create_diverge_rgb_color_hex,
 )
 

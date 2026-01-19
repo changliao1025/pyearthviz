@@ -1,11 +1,10 @@
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from pyearth.system.define_global_variables import *
-from pyearth.visual.color.create_diverge_rgb_color_hex import (
+from pyearthviz.color.create_diverge_rgb_color_hex import (
     create_diverge_rgb_color_hex,
 )
-from pyearth.visual.formatter import log_formatter, MathTextSciFormatter
+from pyearthviz.formatter import log_formatter, MathTextSciFormatter
 
 mpl.rcParams["hatch.linewidth"] = 0.5
 

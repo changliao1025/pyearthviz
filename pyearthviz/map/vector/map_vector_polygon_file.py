@@ -15,24 +15,24 @@ from pyproj import Geod
 import shapely.geometry as sgeom
 from shapely.geometry import Polygon as spolygon
 from pyearth.gis.gdal.gdal_vector_format_support import get_vector_driver_from_filename
-from pyearth.visual.map.zebra_frame import zebra_frame
+from pyearthviz.map.zebra_frame import zebra_frame
 from pyearth.gis.location.get_geometry_coordinates import get_geometry_coordinates
 from pyearth.gis.geometry.calculate_polygon_area import calculate_polygon_area
 from pyearth.gis.geometry.calculate_distance_based_on_longitude_latitude import (
     calculate_distance_based_on_longitude_latitude,
 )
-from pyearth.visual.formatter import OOMFormatter
-from pyearth.visual.map.map_servers import (
+from pyearthviz.formatter import OOMFormatter
+from pyearthviz.map.map_servers import (
     calculate_zoom_level,
     calculate_scale_denominator,
 )
-from pyearth.visual.map.map_servers import (
+from pyearthviz.map.map_servers import (
     StadiaStamen,
     EsriTerrain,
     EsriRelief,
     EsriHydro,
 )
-from pyearth.visual.map.map_servers import (
+from pyearthviz.map.map_servers import (
     Stadia_terrain_images,
     Esri_terrain_images,
     Esri_relief_images,

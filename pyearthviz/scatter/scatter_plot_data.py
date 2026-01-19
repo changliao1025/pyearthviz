@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from pyearth.visual.scatter.scatter_lowess import scatter_lowess
+from pyearthviz.scatter.scatter_lowess import scatter_lowess
 
 
 def scatter_plot_data(

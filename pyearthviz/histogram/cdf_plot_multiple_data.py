@@ -1,9 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from pyearth.visual.color.create_diverge_rgb_color_hex import (
+from pyearthviz.color.create_diverge_rgb_color_hex import (
     create_diverge_rgb_color_hex,
 )
-from pyearth.visual.create_line_style import create_line_style
+from pyearthviz.create_line_style import create_line_style
 
 
 def cdf_plot_multiple_data(

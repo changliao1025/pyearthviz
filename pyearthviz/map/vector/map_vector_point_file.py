@@ -19,13 +19,13 @@ from pyearth.gis.gdal.gdal_vector_format_support import get_vector_driver_from_f
 from pyearth.gis.location.get_geometry_coordinates import get_geometry_coordinates
 from pyearth.toolbox.data.cgpercentiles import cgpercentiles
 from pyearth.toolbox.math.stat.remap import remap
-from pyearth.visual.formatter import OOMFormatter
-from pyearth.visual.map.zebra_frame import zebra_frame
-from pyearth.visual.map.map_servers import (
+from pyearthviz.formatter import OOMFormatter
+from pyearthviz.map.zebra_frame import zebra_frame
+from pyearthviz.map.map_servers import (
     calculate_zoom_level,
     calculate_scale_denominator,
 )
-from pyearth.visual.map.map_servers import (
+from pyearthviz.map.map_servers import (
     StadiaStamen,
     EsriTerrain,
     EsriHydro,

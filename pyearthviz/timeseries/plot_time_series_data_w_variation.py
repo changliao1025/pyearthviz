@@ -2,11 +2,11 @@ from datetime import datetime
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from pyearth.system.define_global_variables import *
-from pyearth.visual.color.create_diverge_rgb_color_hex import (
+
+from pyearthviz.color.create_diverge_rgb_color_hex import (
     create_diverge_rgb_color_hex,
 )
-from pyearth.visual.color.choose_n_color import polylinear_gradient, rand_hex_color
+from pyearthviz.color.choose_n_color import polylinear_gradient, rand_hex_color
 
 
 def plot_time_series_data_w_variation(

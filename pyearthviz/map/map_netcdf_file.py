@@ -9,7 +9,7 @@ from matplotlib.collections import PatchCollection
 from matplotlib.patches import Polygon
 import cartopy as cpl
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
-from pyearth.visual.formatter import OOMFormatter
+from pyearthviz.formatter import OOMFormatter
 
 pProjection = cpl.crs.PlateCarree()  # for latlon data only
 
