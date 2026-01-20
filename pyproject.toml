@@ -48,12 +48,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-scipy = [
-    "scipy>=1.5.0",
-]
-all = [
-    "scipy>=1.5.0",
-]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=3.0.0",
@@ -69,14 +63,14 @@ Repository = "https://github.com/changliao1025/pyearthviz.git"
 Issues = "https://github.com/changliao1025/pyearthviz/issues"
 
 [tool.setuptools]
-packages = ["pyearthviz"]
+packages = {find = {}}
 
 [tool.setuptools.package-data]
 pyearthviz = ["py.typed"]
 
 [tool.black]
 line-length = 100
-target-version = ['py38', 'py39', 'py310', 'py311']
+target-version = ['py39', 'py310', 'py311', 'py312']
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
