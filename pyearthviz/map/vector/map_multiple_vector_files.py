@@ -22,22 +22,7 @@ from pyearth.toolbox.math.stat.remap import remap
 from pyearthviz.map.zebra_frame import zebra_frame
 from pyearth.gis.location.get_geometry_coordinates import get_geometry_coordinates
 from pyearthviz.formatter import OOMFormatter
-from pyearthviz.map.map_servers import (
-    calculate_zoom_level,
-    calculate_scale_denominator,
-)
-from pyearthviz.map.map_servers import (
-    StadiaStamen,
-    EsriTerrain,
-    EsriRelief,
-    EsriHydro,
-)
-from pyearthviz.map.map_servers import (
-    Stadia_terrain_images,
-    Esri_terrain_images,
-    Esri_relief_images,
-    Esri_hydro_images,
-)
+from pyearthviz.map import RasterTileServer
 
 # get the current year for openstreetmap copy right label
 
@@ -60,9 +45,7 @@ def map_multiple_vector_files(
     aVariable_in=None,
     sFilename_output_in=None,
     iFlag_scientific_notation_colorbar_in=None,
-    iFlag_openstreetmap_in=None,
-    iFlag_terrain_image_in=None,
-    iFlag_esri_hydro_image_in=None,
+    aBasemap_provider_in=None,
     iFont_size_in=None,
     iBasemap_zoom_level_in=None,
     sColormap_in=None,
@@ -353,118 +336,37 @@ def map_multiple_vector_files(
             iBasemap_zoom_level = iBasemap_zoom_level_in
         else:
             image_size = [1000, 1000]
-            scale_denominator = calculate_scale_denominator(aExtent, image_size)
+            scale_denominator = RasterTileServer.calculate_scale_denominator(aExtent, image_size)
             pSrc = osr.SpatialReference()
             pSrc.ImportFromEPSG(3857)  # mercator
             pProjection = pSrc.ExportToWkt()
-            iBasemap_zoom_level = calculate_zoom_level(
+            iBasemap_zoom_level = RasterTileServer.calculate_zoom_level(
                 scale_denominator, pProjection, dpi=int(iDPI / 2)
             )
             print("Basemap zoom level: ", iBasemap_zoom_level)
             pass
-        if iFlag_openstreetmap_in is not None and iFlag_openstreetmap_in == 1:
-            from cartopy.io.img_tiles import OSM
+        if aBasemap_provider_in is not None:
+            nTile_provider = len(aBasemap_provider_in)
+            if nTile_provider > 5:
+                print("Too many tile providers, only the first 5 will be used")
+                nTile_provider = 5
+            dAlpha = 1.0
+            #for sBasemap_provider in aBasemap_provider_in:
+            for i in range(nTile_provider):
+                sBasemap_provider = aBasemap_provider_in[i]
 
-            osm_tiles = OSM()
-            # Add the OSM image to the map
-            ax.add_image(osm_tiles, iBasemap_zoom_level)  # , alpha=0.5
-            sLicense_info = (
-                "© OpenStreetMap contributors "
-                + sYear
-                + "."
-                + " Distributed under the Open Data Commons Open Database License (ODbL) v1.0."
-            )
-
-            sLicense_info_wrapped = "\n".join(
-                textwrap.wrap(sLicense_info, width=cwidth)
-            )
-            ax.text(
-                0.5,
-                0.05,
-                sLicense_info_wrapped,
-                transform=ax.transAxes,
-                ha="center",
-                va="center",
-                fontsize=6,
-                color="gray",
-                bbox=dict(
-                    facecolor="white", edgecolor="black", boxstyle="round,pad=0.3"
-                ),
-            )
-
-            # we also need to set transparency for the image to be added
-            dAlpha = 0.5
-        else:
-            if iFlag_terrain_image_in is not None and iFlag_terrain_image_in == 1:
-                stamen_terrain = StadiaStamen()
-                ll_target_domain = sgeom.box(minx, miny, maxx, maxy)
-                multi_poly = stamen_terrain.crs.project_geometry(
-                    ll_target_domain, ccrs.PlateCarree()
-                )
-                target_domain = multi_poly.geoms[0]
-                _, aExtent_terrain, _ = stamen_terrain.image_for_domain(
-                    target_domain, iBasemap_zoom_level
-                )
-                img_stadia_terrain = Stadia_terrain_images(aExtent, iBasemap_zoom_level)
-                ax.imshow(
-                    img_stadia_terrain,
-                    extent=aExtent_terrain,
-                    transform=stamen_terrain.crs,
-                )
-                # add the license information
-                sLicense_info = "© Stamen Design, under a Creative Commons Attribution (CC BY 3.0) license."
-                sLicense_info_wrapped = "\n".join(
-                    textwrap.wrap(sLicense_info, width=cwidth)
-                )
-                ax.text(
-                    0.5,
-                    0.05,
-                    sLicense_info_wrapped,
-                    transform=ax.transAxes,
-                    ha="center",
-                    va="center",
-                    fontsize=6,
-                    color="gray",
-                    bbox=dict(
-                        facecolor="white", edgecolor="black", boxstyle="round,pad=0.3"
-                    ),
-                )
-                dAlpha = 0.8
-            else:
-                if (
-                    iFlag_esri_hydro_image_in is not None
-                    and iFlag_esri_hydro_image_in == 1
-                ):
-                    esri_terrain = EsriTerrain()
-                    esri_hydro = EsriHydro()
-                    ll_target_domain = sgeom.box(minx, miny, maxx, maxy)
-                    multi_poly = esri_hydro.crs.project_geometry(
-                        ll_target_domain, ccrs.PlateCarree()
-                    )
-                    target_domain = multi_poly.geoms[0]
-                    _, aExtent_terrain, _ = esri_terrain.image_for_domain(
-                        target_domain, iBasemap_zoom_level
-                    )
-                    _, aExtent_hydro, _ = esri_hydro.image_for_domain(
-                        target_domain, iBasemap_zoom_level
-                    )
-                    img_esri_terrain = Esri_terrain_images(aExtent, iBasemap_zoom_level)
-                    img_eari_hydro = Esri_hydro_images(aExtent, iBasemap_zoom_level)
-                    ax.imshow(
-                        img_esri_terrain,
-                        extent=aExtent_terrain,
-                        transform=esri_terrain.crs,
-                    )
-                    ax.imshow(
-                        img_eari_hydro, extent=aExtent_hydro, transform=esri_hydro.crs
-                    )
-                    # add the license information
-                    sLicense_info = "© Esri Hydro Reference Overlay"
+                # Check if this is a Cartopy built-in provider (e.g., 'OSM')
+                if sBasemap_provider == 'OSM':
+                    # Use Cartopy's built-in OSM directly
+                    from cartopy.io.img_tiles import OSM
+                    pTiles = OSM()
+                    ax.add_image(pTiles, iBasemap_zoom_level, alpha=dAlpha - i * 0.1)
+                    # Add OSM attribution
+                    sLicense_info = "© OpenStreetMap contributors"
                     sLicense_info_wrapped = "\n".join(
-                        textwrap.wrap(sLicense_info, width=60)
+                        textwrap.wrap(sLicense_info, width=cwidth)
                     )
-                    ax.text(
-                        0.5,
+                    ax.text(0.5,
                         0.05,
                         sLicense_info_wrapped,
                         transform=ax.transAxes,
@@ -473,14 +375,31 @@ def map_multiple_vector_files(
                         fontsize=6,
                         color="gray",
                         bbox=dict(
-                            facecolor="white",
-                            edgecolor="black",
-                            boxstyle="round,pad=0.3",
+                            facecolor="white", edgecolor="black", boxstyle="round,pad=0.3"
                         ),
                     )
-                    dAlpha = 0.8
                 else:
-                    pass
+                    # Use RasterTileServer for custom providers
+                    pTile_service = RasterTileServer(sBasemap_provider)
+                    pTiles = pTile_service.get_cartopy_source()
+                    ax.add_image(pTiles, iBasemap_zoom_level, alpha=dAlpha - i * 0.1)
+                    sLicense_info = pTile_service.get_license_info()
+                    sLicense_info_wrapped = "\n".join(
+                        textwrap.wrap(sLicense_info, width=cwidth)
+                        )
+                    ax.text(0.5,
+                        0.05,
+                        sLicense_info_wrapped,
+                        transform=ax.transAxes,
+                        ha="center",
+                        va="center",
+                        fontsize=6,
+                        color="gray",
+                        bbox=dict(
+                            facecolor="white", edgecolor="black", boxstyle="round,pad=0.3"
+                        ),
+                        )
+            dAlpha = 0.5
 
     except URLError as e:
         print("No internet connection")
