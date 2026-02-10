@@ -351,6 +351,7 @@ def map_multiple_vector_files(
                 print("Too many tile providers, only the first 5 will be used")
                 nTile_provider = 5
             dAlpha = 1.0
+            aLicense_info_list = []  # Collect all license info
             #for sBasemap_provider in aBasemap_provider_in:
             for i in range(nTile_provider):
                 sBasemap_provider = aBasemap_provider_in[i]
@@ -361,44 +362,33 @@ def map_multiple_vector_files(
                     from cartopy.io.img_tiles import OSM
                     pTiles = OSM()
                     ax.add_image(pTiles, iBasemap_zoom_level, alpha=dAlpha - i * 0.1)
-                    # Add OSM attribution
-                    sLicense_info = "© OpenStreetMap contributors"
-                    sLicense_info_wrapped = "\n".join(
-                        textwrap.wrap(sLicense_info, width=cwidth)
-                    )
-                    ax.text(0.5,
-                        0.05,
-                        sLicense_info_wrapped,
-                        transform=ax.transAxes,
-                        ha="center",
-                        va="center",
-                        fontsize=6,
-                        color="gray",
-                        bbox=dict(
-                            facecolor="white", edgecolor="black", boxstyle="round,pad=0.3"
-                        ),
-                    )
+                    # Collect OSM attribution
+                    aLicense_info_list.append("© OpenStreetMap contributors")
                 else:
                     # Use RasterTileServer for custom providers
                     pTile_service = RasterTileServer(sBasemap_provider)
                     pTiles = pTile_service.get_cartopy_source()
                     ax.add_image(pTiles, iBasemap_zoom_level, alpha=dAlpha - i * 0.1)
-                    sLicense_info = pTile_service.get_license_info()
-                    sLicense_info_wrapped = "\n".join(
-                        textwrap.wrap(sLicense_info, width=cwidth)
-                        )
-                    ax.text(0.5,
-                        0.05,
-                        sLicense_info_wrapped,
-                        transform=ax.transAxes,
-                        ha="center",
-                        va="center",
-                        fontsize=6,
-                        color="gray",
-                        bbox=dict(
-                            facecolor="white", edgecolor="black", boxstyle="round,pad=0.3"
-                        ),
-                        )
+                    aLicense_info_list.append(pTile_service.get_license_info())
+
+            # Combine all license info and display once
+            if aLicense_info_list:
+                sLicense_info = " | ".join(aLicense_info_list)
+                sLicense_info_wrapped = "\n".join(
+                    textwrap.wrap(sLicense_info, width=cwidth)
+                )
+                ax.text(0.5,
+                    0.05,
+                    sLicense_info_wrapped,
+                    transform=ax.transAxes,
+                    ha="center",
+                    va="center",
+                    fontsize=6,
+                    color="gray",
+                    bbox=dict(
+                        facecolor="white", edgecolor="black", boxstyle="round,pad=0.3"
+                    ),
+                )
             dAlpha = 0.5
 
     except URLError as e:

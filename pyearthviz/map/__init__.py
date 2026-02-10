@@ -8,6 +8,6 @@ Main Components:
 - Map plotting functions for various data types (raster, vector, MPAS mesh, etc.)
 """
 
-from pyearthviz.map.map_servers import RasterTileServer
+from pyearthviz.map.raster_map_servers import RasterTileServer
 
 __all__ = ['RasterTileServer']

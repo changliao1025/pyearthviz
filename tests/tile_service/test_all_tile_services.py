@@ -15,8 +15,8 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Test extent (San Francisco area - small for faster testing)
 TEST_EXTENT = [-122.5, -122.3, 37.7, 37.8]
-dLongitude_center_in = 117
-dLatitude_center_in = 39
+dLongitude_center_in = 121
+dLatitude_center_in = 31
 buffer = 0.8
 
 TEST_EXTENT = [dLongitude_center_in - buffer, dLongitude_center_in + buffer, dLatitude_center_in - buffer, dLatitude_center_in + buffer]
@@ -125,24 +125,24 @@ def test_all_providers():
     # List of all providers to test
     providers = [
         # Esri providers (no API key needed)
-        #('Esri.Terrain', None),
-        #('Esri.Relief', None),
-        #('Esri.Hydro', None),
-        #('Esri.WorldImagery', None),
-        #('Esri.WorldTopo', None),
-        #('Esri.NatGeo', None),
-        #('Esri.WorldStreet', None),
-        #('Esri.GrayCanvasBase', None),
-        #('Esri.GrayCanvasLabels', None),
-        #('Esri.WorldOceanBase', None),
+        ('Esri.Terrain', None),
+        ('Esri.Relief', None),
+        ('Esri.Hydro', None),
+        ('Esri.WorldImagery', None),
+        ('Esri.WorldTopo', None),
+        ('Esri.NatGeo', None),
+        ('Esri.WorldStreet', None),
+        ('Esri.GrayCanvasBase', None),
+        ('Esri.GrayCanvasLabels', None),
+        ('Esri.WorldOceanBase', None),
 
         # Stadia providers (require API key)
         ('Stadia.StamenTerrain', stadia_api_key),
-        #('Stadia.AlidadeSmooth', stadia_api_key),
+        ('Stadia.AlidadeSmooth', stadia_api_key),
 
         # Carto providers (no API key needed)
-        #('Carto.Positron', None),
-        #('Carto.DarkMatter', None),
+        ('Carto.Positron', None),
+        ('Carto.DarkMatter', None),
     ]
 
     results = []

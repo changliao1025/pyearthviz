@@ -27,17 +27,14 @@ Example:
     >>> providers = RasterTileServer.get_available_providers()
 """
 
-import os
-import math
-import warnings
 from io import BytesIO
 from typing import List, Tuple, Optional, Dict, Any
 from datetime import datetime
-
+import warnings
+import math
 import numpy as np
 from osgeo import osr
 import cartopy.io.img_tiles as cimgt
-
 
 try:
     import requests
@@ -46,10 +43,10 @@ except ImportError:
     requests = None
     Image = None
 
-from pyearth.gis.spatialref.convert_between_degree_and_meter import degree_to_meter
+from .base_tile_server import BaseTileServer
 
 
-class RasterTileServer:
+class RasterTileServer(BaseTileServer):
     """
     Unified interface for accessing map tile servers.
 
@@ -281,120 +278,8 @@ class RasterTileServer:
                 "Install them with: pip install requests Pillow"
             )
 
-        if provider not in self._PROVIDERS:
-            available = ', '.join(self._PROVIDERS.keys())
-            raise ValueError(
-                f"Unknown provider '{provider}'. Available providers: {available}"
-            )
-
-        self.provider = provider
-        self._config = self._PROVIDERS[provider].copy()
-        self.tile_size = self._config['tile_size']
-
-        # Handle API key
-        if self._config['requires_api_key']:
-            if api_key:
-                self.api_key = api_key
-            else:
-                # Try to get from environment
-                env_key = 'STADIA_API_KEY' if 'Stadia' in provider else None
-                if env_key:
-                    self.api_key = os.environ.get(env_key)
-                    if not self.api_key:
-                        warnings.warn(
-                            f"Provider '{provider}' requires an API key. "
-                            f"Provide it via api_key parameter or {env_key} environment variable."
-                        )
-                else:
-                    self.api_key = None
-        else:
-            self.api_key = api_key
-
-    def _validate_zoom_level(self, zoom_level: int, supersample: int = 0) -> Tuple[int, int]:
-        """
-        Validate zoom level against provider constraints and adjust if needed.
-
-        Args:
-            zoom_level: Base zoom level
-            supersample: Super-sampling level
-
-        Returns:
-            Tuple of (validated_fetch_zoom, adjusted_supersample)
-
-        Raises:
-            ValueError: If even the base zoom level exceeds provider limits
-        """
-        fetch_zoom = zoom_level + supersample
-        min_zoom = self._config.get('min_zoom', 0)
-        max_zoom = self._config.get('max_zoom', 18)
-
-        # Check minimum
-        if zoom_level < min_zoom:
-            raise ValueError(
-                f"{self.provider} does not support zoom level {zoom_level}. "
-                f"Minimum supported zoom is {min_zoom}."
-            )
-
-        # Check maximum for base zoom
-        if zoom_level > max_zoom:
-            raise ValueError(
-                f"{self.provider} does not support zoom level {zoom_level}. "
-                f"Maximum supported zoom is {max_zoom}."
-            )
-
-        # Check if supersample pushes beyond max_zoom
-        if fetch_zoom > max_zoom:
-            original_supersample = supersample
-            supersample = max(0, max_zoom - zoom_level)
-            warnings.warn(
-                f"{self.provider} maximum zoom level is {max_zoom}. "
-                f"Requested zoom {zoom_level} with supersample={original_supersample} "
-                f"would require zoom {fetch_zoom}. "
-                f"Automatically reducing supersample to {supersample} (fetch zoom={zoom_level + supersample}).",
-                UserWarning
-            )
-            fetch_zoom = zoom_level + supersample
-
-        return fetch_zoom, supersample
-
-    def get_url_template(self) -> str:
-        """
-        Get the URL template for this provider.
-
-        Returns:
-            URL template string with placeholders for {z}, {x}, {y}, and optionally {api_key}
-
-        Example:
-            >>> server = RasterTileServer('Esri.Terrain')
-            >>> print(server.get_url_template())
-        """
-        return self._config['url_template']
-
-    def _build_tile_url(self, z: int, x: int, y: int) -> str:
-        """Build the complete URL for a specific tile."""
-        url = self._config['url_template'].format(
-            z=z, x=x, y=y, api_key=self.api_key or ''
-        )
-        return url
-
-    def _apply_special_handling(self, img: 'Image.Image') -> 'Image.Image':
-        """Apply provider-specific image processing."""
-        handling = self._config.get('special_handling')
-
-        if handling == 'make_black_transparent':
-            # Convert black pixels to transparent (used for Esri.Hydro)
-            img = img.convert('RGBA')
-            datas = img.getdata()
-            new_data = []
-            for item in datas:
-                # Change all black pixels to transparent
-                if item[0] == 0 and item[1] == 0 and item[2] == 0:
-                    new_data.append((0, 0, 0, 0))
-                else:
-                    new_data.append(item)
-            img.putdata(new_data)
-
-        return img
+        # Delegate provider validation, config and API-key handling to BaseTileServer
+        super().__init__(provider, api_key)
 
     def fetch_tile(self, z: int, x: int, y: int) -> 'Image.Image':
         """
@@ -473,9 +358,7 @@ class RasterTileServer:
         fetch_zoom, supersample = self._validate_zoom_level(zoom_level, supersample)
 
         minx, maxx, miny, maxy = extent
-        x_min, y_min, x_max, y_max = self.extent_to_tile_indices(
-            extent, fetch_zoom
-        )
+        x_min, y_min, x_max, y_max = RasterTileServer.extent_to_tile_indices(extent, fetch_zoom)
 
         # Fetch tiles
         tiles = []
@@ -490,18 +373,18 @@ class RasterTileServer:
         actual_tile_size = tiles[0][0].size[0] if tiles and tiles[0] else self.tile_size
 
         # Combine the tiles into a single image
-        combined_img = self.combine_tiles(tiles, actual_tile_size)
+        combined_img = RasterTileServer.combine_tiles(tiles, actual_tile_size)
 
         # If super-sampling, downsample to target size
         if supersample > 0:
             # Calculate target size (what it would have been at original zoom)
             original_x_min, original_y_min, original_x_max, original_y_max = \
-                self.extent_to_tile_indices(extent, zoom_level)
+                RasterTileServer.extent_to_tile_indices(extent, zoom_level)
             target_width = (original_x_max - original_x_min + 1) * self.tile_size
             target_height = (original_y_max - original_y_min + 1) * self.tile_size
 
-            # Downsample with high-quality filter
-            resample_filter = self._get_resample_filter('lanczos')  # Always use LANCZOS for downsampling
+            # Downsample with high-quality filter (always use LANCZOS for downsampling)
+            resample_filter = self._get_resample_filter('lanczos')
             combined_img = combined_img.resize(
                 (target_width, target_height),
                 resample=resample_filter
@@ -521,22 +404,20 @@ class RasterTileServer:
         img_array = np.array(combined_img)
         return img_array
 
-    def _get_resample_filter(self, method: str):
-        """Get PIL resampling filter from method name."""
-        filters = {
-            'lanczos': Image.LANCZOS,
-            'bicubic': Image.BICUBIC,
-            'bilinear': Image.BILINEAR,
-            'nearest': Image.NEAREST
-        }
-        return filters.get(method.lower(), Image.LANCZOS)
-
-    def get_cartopy_source(self) -> cimgt.GoogleTiles:
+    def get_cartopy_source(self, supersample: int = 0, resample_method: str = 'lanczos') -> cimgt.GoogleTiles:
         """
-        Get a Cartopy-compatible tile source for use with ax.add_image().
+        Get a Cartopy-compatible tile source with supersample support for use with ax.add_image().
+
+        This creates a custom tile source that fetches tiles at a higher zoom level and downsamples
+        them for better quality and smoother appearance.
+
+        Args:
+            supersample: Super-sampling level (0=off, 1=fetch 2x zoom and downsample,
+                        2=fetch 4x zoom). Higher values provide better quality.
+            resample_method: Resampling method - 'lanczos' (best), 'bicubic', 'bilinear', 'nearest'
 
         Returns:
-            Cartopy GoogleTiles subclass instance
+            Cartopy GoogleTiles subclass instance with supersample support
 
         Example:
             >>> import matplotlib.pyplot as plt
@@ -544,86 +425,96 @@ class RasterTileServer:
             >>>
             >>> fig, ax = plt.subplots(subplot_kw={'projection': ccrs.PlateCarree()})
             >>> server = RasterTileServer('Esri.Terrain')
-            >>> ax.add_image(server.get_cartopy_source(), 10)
+            >>> # Use supersample for better quality
+            >>> ax.add_image(server.get_cartopy_source(supersample=1), 10)
         """
-        # Create a dynamic GoogleTiles subclass for this provider
+        # Unified cartopy tile source supporting optional supersampling.
         provider = self.provider
         config = self._config
         api_key = self.api_key
+        parent_instance = self
+        resample_filter = self._get_resample_filter(resample_method)
 
-        class DynamicTileSource(cimgt.GoogleTiles):
+        class UnifiedTileSource(cimgt.GoogleTiles):
             def _image_url(self, tile):
                 x, y, z = tile
-                url = config['url_template'].format(
-                    z=z, x=x, y=y, api_key=api_key or ''
-                )
-                return url
+                # Determine fetch zoom and tile coords depending on supersample
+                fetch_z = z + supersample if supersample and supersample > 0 else z
+                max_zoom = config.get('max_zoom', 18)
+                if fetch_z > max_zoom:
+                    fetch_z = max_zoom
 
-        return DynamicTileSource()
+                scale = 2 ** max(0, fetch_z - z)
+                fetch_x = x * scale
+                fetch_y = y * scale
 
-    def suggest_optimal_zoom(
-        self,
-        extent: List[float],
-        output_dpi: int,
-        output_size: Tuple[int, int],
-        quality_preference: str = 'balanced'
-    ) -> int:
-        """
-        Suggest optimal zoom level based on output requirements and quality preference.
+                return config['url_template'].format(z=fetch_z, x=fetch_x, y=fetch_y, api_key=api_key or '')
 
-        This method calculates the best zoom level to achieve good quality output
-        considering the extent size, output DPI, image dimensions, and tile size.
+            def get_image(self, tile):
+                x, y, z = tile
 
-        Args:
-            extent: [minx, maxx, miny, maxy] in longitude/latitude (degrees)
-            output_dpi: Output DPI (e.g., 150 for screen, 300 for print)
-            output_size: (width, height) in pixels
-            quality_preference: 'fast' (lower zoom), 'balanced', or 'quality' (higher zoom)
+                # If no supersample requested, defer to parent behaviour and apply special handling
+                if not supersample or supersample <= 0:
+                    result = super().get_image(tile)
+                    img, extent, origin = result
+                    if config.get('special_handling'):
+                        img = parent_instance._apply_special_handling(img)
+                    return img, extent, origin
 
-        Returns:
-            Recommended zoom level (integer)
+                # Compute actual supersample level respecting provider max_zoom
+                fetch_z = z + supersample
+                max_zoom = config.get('max_zoom', 18)
+                actual_supersample = supersample
+                if fetch_z > max_zoom:
+                    actual_supersample = max_zoom - z
+                    fetch_z = max_zoom
 
-        Example:
-            >>> server = RasterTileServer('Esri.Terrain')
-            >>> extent = [115, 119, 36, 38]  # 4° × 2° area
-            >>> zoom = server.suggest_optimal_zoom(
-            ...     extent, output_dpi=150, output_size=(1200, 1200), quality_preference='quality'
-            ... )
-            >>> print(f"Recommended zoom: {zoom}")
-        """
-        # Calculate base zoom using existing method
-        scale_denominator = self.calculate_scale_denominator(extent, output_size, output_dpi)
-        pSrc = osr.SpatialReference()
-        pSrc.ImportFromEPSG(3857)  # Web Mercator
-        projection_wkt = pSrc.ExportToWkt()
+                if actual_supersample <= 0:
+                    result = super().get_image(tile)
+                    img, extent, origin = result
+                    if config.get('special_handling'):
+                        img = parent_instance._apply_special_handling(img)
+                    return img, extent, origin
 
-        base_zoom = self.calculate_zoom_level(
-            scale_denominator,
-            projection_wkt,
-            dpi=output_dpi,
-            tile_width=self.tile_size,
-            tile_height=self.tile_size
-        )
+                scale = 2 ** actual_supersample
 
-        # Adjust based on quality preference
-        quality_adjustments = {
-            'fast': -1,      # One level lower for faster loading
-            'balanced': 0,   # Use calculated zoom
-            'quality': +2    # Two levels higher for best quality
-        }
+                # Fetch all high-res tiles and ensure RGBA
+                tiles = []
+                for dy in range(scale):
+                    row = []
+                    for dx in range(scale):
+                        fetch_x = x * scale + dx
+                        fetch_y = y * scale + dy
+                        try:
+                            high_res_tile = parent_instance.fetch_tile(fetch_z, fetch_x, fetch_y)
+                            if high_res_tile.mode != 'RGBA':
+                                high_res_tile = high_res_tile.convert('RGBA')
+                            row.append(high_res_tile)
+                        except Exception:
+                            blank = Image.new('RGBA', (parent_instance.tile_size, parent_instance.tile_size), (0, 0, 0, 0))
+                            row.append(blank)
+                    tiles.append(row)
 
-        adjustment = quality_adjustments.get(quality_preference.lower(), 0)
+                if tiles and tiles[0]:
+                    actual_tile_size = tiles[0][0].size[0]
+                    combined_img = parent_instance.combine_tiles(tiles, actual_tile_size)
+                else:
+                    combined_img = Image.new('RGBA', (parent_instance.tile_size, parent_instance.tile_size), (0, 0, 0, 0))
 
-        # Account for @2x tiles (512px) - they effectively provide one zoom level higher
-        if self.tile_size >= 512:
-            adjustment += 1
+                # Downsample to target tile size
+                target_size = parent_instance.tile_size
+                combined_img = combined_img.resize((target_size, target_size), resample=resample_filter)
 
-        suggested_zoom = base_zoom + adjustment
+                # Try to obtain extent from parent, use base class fallback if needed
+                try:
+                    _, extent, origin = super().get_image(tile)
+                except Exception:
+                    extent = BaseTileServer._calculate_tile_extent_web_mercator(x, y, z)
+                    origin = 'upper'
 
-        # Clamp to reasonable range
-        suggested_zoom = max(1, min(18, suggested_zoom))
+                return combined_img, extent, origin
 
-        return suggested_zoom
+        return UnifiedTileSource()
 
     def get_projected_extent(
         self,
@@ -679,128 +570,6 @@ class RasterTileServer:
 
         return projected_extent, target_domain
 
-    @staticmethod
-    def lonlat_to_tile(lon: float, lat: float, zoom: int) -> Tuple[int, int]:
-        """
-        Convert longitude and latitude to tile indices at a given zoom level.
-
-        Args:
-            lon: Longitude in degrees
-            lat: Latitude in degrees
-            zoom: Zoom level
-
-        Returns:
-            Tuple of (x_tile, y_tile) indices
-
-        Example:
-            >>> x, y = RasterTileServer.lonlat_to_tile(-122.4, 37.8, zoom=10)
-        """
-        lat_rad = math.radians(lat)
-        n = 2.0 ** zoom
-        x_tile = int((lon + 180.0) / 360.0 * n)
-        y_tile = int(
-            (1.0 - math.log(math.tan(lat_rad) + (1 / math.cos(lat_rad))) / math.pi)
-            / 2.0
-            * n
-        )
-        return x_tile, y_tile
-
-    @staticmethod
-    def extent_to_tile_indices(
-        extent: List[float],
-        zoom: int
-    ) -> Tuple[int, int, int, int]:
-        """
-        Convert extent (minx, miny, maxx, maxy) to tile indices at a given zoom level.
-
-        Args:
-            extent: [minx, maxx, miny, maxy] in longitude/latitude (degrees)
-            zoom: Zoom level
-
-        Returns:
-            Tuple of (x_min, y_min, x_max, y_max) tile indices
-
-        Example:
-            >>> extent = [-122.5, -122.3, 37.7, 37.8]
-            >>> x_min, y_min, x_max, y_max = RasterTileServer.extent_to_tile_indices(extent, 10)
-        """
-        minx, maxx, miny, maxy = extent
-        x_min, y_max = RasterTileServer.lonlat_to_tile(minx, miny, zoom)
-        x_max, y_min = RasterTileServer.lonlat_to_tile(maxx, maxy, zoom)
-        return x_min, y_min, x_max, y_max
-
-    @staticmethod
-    def combine_tiles(
-        tiles: List[List['Image.Image']],
-        tile_size: int
-    ) -> 'Image.Image':
-        """
-        Combine a 2D array of tile images into a single image.
-
-        Args:
-            tiles: 2D list of PIL Image objects [row][col]
-            tile_size: Size of each tile in pixels
-
-        Returns:
-            Combined PIL Image with RGBA mode
-
-        Example:
-            >>> tiles = [[tile1, tile2], [tile3, tile4]]
-            >>> combined = RasterTileServer.combine_tiles(tiles, tile_size=256)
-        """
-        rows = len(tiles)
-        cols = len(tiles[0]) if rows > 0 else 0
-
-        if rows == 0 or cols == 0:
-            # Return empty image if no tiles
-            return Image.new('RGBA', (tile_size, tile_size))
-
-        combined_img = Image.new('RGBA', (cols * tile_size, rows * tile_size))
-
-        # Simple paste - super-sampling with LANCZOS downsampling eliminates tile boundaries naturally
-        for row in range(rows):
-            for col in range(cols):
-                combined_img.paste(tiles[row][col], (col * tile_size, row * tile_size))
-
-        return combined_img
-
-    @classmethod
-    def get_available_providers(cls) -> List[str]:
-        """
-        Get a list of all available tile server providers.
-
-        Returns:
-            List of provider names
-
-        Example:
-            >>> providers = RasterTileServer.get_available_providers()
-            >>> print(providers)
-            ['Stadia.StamenTerrain', 'Esri.Terrain', 'Esri.Relief', ...]
-        """
-        return list(cls._PROVIDERS.keys())
-
-    @classmethod
-    def get_provider_info(cls, provider: Optional[str] = None) -> Dict[str, Any]:
-        """
-        Get information about a provider or all providers.
-
-        Args:
-            provider: Optional provider name. If None, returns info for all providers.
-
-        Returns:
-            Dictionary with provider information
-
-        Example:
-            >>> info = RasterTileServer.get_provider_info('Esri.Terrain')
-            >>> print(info['description'])
-        """
-        if provider:
-            if provider not in cls._PROVIDERS:
-                raise ValueError(f"Unknown provider '{provider}'")
-            return cls._PROVIDERS[provider].copy()
-        else:
-            return {k: v.copy() for k, v in cls._PROVIDERS.items()}
-
     def get_license_info(self, year: Optional[str] = None, include_url: bool = False) -> str:
         """
         Get the license/attribution information for the tile provider.
@@ -847,135 +616,364 @@ class RasterTileServer:
 
         return license_info
 
-    def __repr__(self) -> str:
-        """String representation of RasterTileServer instance."""
-        return f"RasterTileServer(provider='{self.provider}', tile_size={self.tile_size})"
 
-class VectorTileServer:
-    """
-    Lightweight client for vector tile services.
+    def suggest_optimal_zoom(
+        self,
+        extent: List[float],
+        output_dpi: int,
+        output_size: Tuple[int, int],
+        quality_preference: str = 'balanced'
+    ) -> int:
+        """
+        Suggest optimal zoom level based on output requirements and quality preference.
+        """
+        # Calculate base zoom using existing method
+        scale_denominator = self.calculate_scale_denominator(extent, output_size, output_dpi)
+        pSrc = osr.SpatialReference()
+        pSrc.ImportFromEPSG(3857)  # Web Mercator
+        projection_wkt = pSrc.ExportToWkt()
 
-    This class exposes URLs and basic fetch helpers for vector tiles and
-    style JSON. It does not render vector tiles to raster images.
-    """
+        base_zoom = self.calculate_zoom_level(
+            scale_denominator,
+            projection_wkt,
+            dpi=output_dpi,
+            tile_width=self.tile_size,
+            tile_height=self.tile_size
+        )
 
-    _PROVIDERS = {
-        'Esri.Hydro.Vector': {
-            'service_url': 'https://basemaps.arcgis.com/arcgis/rest/services/World_Basemap_v2/VectorTileServer',
-            'style_url': 'https://www.arcgis.com/sharing/rest/content/items/6d188135dc814d4ea254440a3dd844df/resources/styles/root.json',
-            'tile_url_template': 'https://basemaps.arcgis.com/arcgis/rest/services/World_Basemap_v2/VectorTileServer/tile/{z}/{y}/{x}.pbf',
-            'requires_api_key': False,
-            'description': 'Esri Environment Surface Water and Label (vector tiles)',
-            'min_zoom': 0,
-            'max_zoom': 23
+        # Adjust based on quality preference
+        quality_adjustments = {
+            'fast': -1,
+            'balanced': 0,
+            'quality': +2
         }
-    }
 
-    def __init__(self, provider: str, api_key: Optional[str] = None, **kwargs):
-        if requests is None:
-            raise ImportError(
-                "The package 'requests' is required for vector tile fetching. "
-                "Install it with: pip install requests"
+        adjustment = quality_adjustments.get(quality_preference.lower(), 0)
+
+        # Account for @2x tiles (512px)
+        if self.tile_size >= 512:
+            adjustment += 1
+
+        suggested_zoom = base_zoom + adjustment
+
+        # Clamp to provider's zoom range
+        min_zoom = self._config.get('min_zoom', 0)
+        max_zoom = self._config.get('max_zoom', 18)
+        suggested_zoom = max(min_zoom, min(max_zoom, suggested_zoom))
+
+        return suggested_zoom
+
+    def _apply_special_handling(self, img: 'Image.Image') -> 'Image.Image':
+        """Apply provider-specific image processing."""
+        handling = self._config.get('special_handling')
+
+        if handling == 'make_black_transparent':
+            # Convert black pixels to transparent (used for Esri.Hydro)
+            img = img.convert('RGBA')
+            datas = img.getdata()
+            new_data = []
+            for item in datas:
+                # Change all black pixels to transparent
+                if item[0] == 0 and item[1] == 0 and item[2] == 0:
+                    new_data.append((0, 0, 0, 0))
+                else:
+                    new_data.append(item)
+            img.putdata(new_data)
+
+        return img
+
+    def _validate_zoom_level(self, zoom_level: int, supersample: int = 0) -> Tuple[int, int]:
+        """Validate and adjust zoom + supersample against provider limits.
+
+        Returns (fetch_zoom, adjusted_supersample).
+        """
+        fetch_zoom = zoom_level + supersample
+        min_zoom = self._config.get('min_zoom', 0)
+        max_zoom = self._config.get('max_zoom', 18)
+
+        if zoom_level < min_zoom:
+            raise ValueError(f"{self.provider} does not support zoom level {zoom_level}. Minimum supported zoom is {min_zoom}.")
+        if zoom_level > max_zoom:
+            raise ValueError(f"{self.provider} does not support zoom level {zoom_level}. Maximum supported zoom is {max_zoom}.")
+
+        if fetch_zoom > max_zoom:
+            original_supersample = supersample
+            supersample = max(0, max_zoom - zoom_level)
+            warnings.warn(
+                f"{self.provider} maximum zoom level is {max_zoom}. Requested zoom {zoom_level} with supersample={original_supersample} would require zoom {fetch_zoom}. Automatically reducing supersample to {supersample}.",
+                UserWarning,
             )
+            fetch_zoom = zoom_level + supersample
 
-        if provider not in self._PROVIDERS:
-            available = ', '.join(self._PROVIDERS.keys())
-            raise ValueError(
-                f"Unknown provider '{provider}'. Available providers: {available}"
-            )
+        return fetch_zoom, supersample
 
-        self.provider = provider
-        self._config = self._PROVIDERS[provider].copy()
-
-        if self._config['requires_api_key']:
-            self.api_key = api_key
-            if not self.api_key:
-                warnings.warn(
-                    f"Provider '{provider}' requires an API key. "
-                    "Provide it via api_key parameter.",
-                    UserWarning
-                )
-        else:
-            self.api_key = api_key
-
-    def _validate_zoom_level(self, zoom_level: int) -> None:
-        min_zoom = self._config.get('min_zoom')
-        max_zoom = self._config.get('max_zoom')
-
-        if min_zoom is not None and zoom_level < min_zoom:
-            raise ValueError(
-                f"{self.provider} does not support zoom level {zoom_level}. "
-                f"Minimum supported zoom is {min_zoom}."
-            )
-
-        if max_zoom is not None and zoom_level > max_zoom:
-            raise ValueError(
-                f"{self.provider} does not support zoom level {zoom_level}. "
-                f"Maximum supported zoom is {max_zoom}."
-            )
-
-    def get_style_url(self) -> str:
-        return self._config['style_url']
-
-    def get_tile_url_template(self) -> str:
-        return self._config['tile_url_template']
-
-    def _build_tile_url(self, z: int, x: int, y: int) -> str:
-        self._validate_zoom_level(z)
-        url = self._config['tile_url_template'].format(z=z, x=x, y=y)
-        return url
-
-    def fetch_tile(self, z: int, x: int, y: int) -> bytes:
+    # --- Class methods ---
+    @classmethod
+    def extent_to_tile_indices(
+        cls,
+        extent: List[float],
+        zoom: int
+    ) -> Tuple[int, int, int, int]:
         """
-        Fetch a vector tile as raw PBF bytes.
-        """
-        url = self._build_tile_url(z, x, y)
-        response = requests.get(url)
-        if response.status_code == 200:
-            return response.content
-        raise Exception(
-            f"Failed to fetch tile from {self.provider}: "
-            f"HTTP {response.status_code} - {url}"
-        )
+        Convert extent (minx, maxx, miny, maxy) to tile indices at a given zoom level.
 
-    def fetch_style_json(self) -> Dict[str, Any]:
+        Implemented as a classmethod so subclasses can override `lonlat_to_tile`.
         """
-        Fetch the style JSON for this vector tile layer.
-        """
-        url = self.get_style_url()
-        response = requests.get(url)
-        if response.status_code == 200:
-            return response.json()
-        raise Exception(
-            f"Failed to fetch style JSON from {self.provider}: "
-            f"HTTP {response.status_code} - {url}"
-        )
-
-    def fetch_tilejson(self) -> Dict[str, Any]:
-        """
-        Fetch the VectorTileServer metadata (TileJSON-like) payload.
-        """
-        url = f"{self._config['service_url']}?f=pjson"
-        response = requests.get(url)
-        if response.status_code == 200:
-            return response.json()
-        raise Exception(
-            f"Failed to fetch tile metadata from {self.provider}: "
-            f"HTTP {response.status_code} - {url}"
-        )
+        minx, maxx, miny, maxy = extent
+        x_min, y_max = cls.lonlat_to_tile(minx, miny, zoom)
+        x_max, y_min = cls.lonlat_to_tile(maxx, maxy, zoom)
+        return x_min, y_min, x_max, y_max
 
     @classmethod
-    def get_available_providers(cls) -> List[str]:
-        return list(cls._PROVIDERS.keys())
+    def lonlat_to_tile(cls, lon: float, lat: float, zoom: int) -> Tuple[int, int]:
+        """
+        Convert longitude and latitude to tile indices at a given zoom level.
+        """
+        lat_rad = math.radians(lat)
+        n = 2.0 ** zoom
+        x_tile = int((lon + 180.0) / 360.0 * n)
+        y_tile = int(
+            (1.0 - math.log(math.tan(lat_rad) + (1 / math.cos(lat_rad))) / math.pi)
+            / 2.0
+            * n
+        )
+        return x_tile, y_tile
+
+    # --- Static / utility methods ---
+    @staticmethod
+    def combine_tiles(
+        tiles: List[List['Image.Image']],
+        tile_size: int
+    ) -> 'Image.Image':
+        """
+        Combine a 2D array of tile images into a single image.
+        """
+        rows = len(tiles)
+        cols = len(tiles[0]) if rows > 0 else 0
+
+        if rows == 0 or cols == 0:
+            return Image.new('RGBA', (tile_size, tile_size))
+
+        combined_img = Image.new('RGBA', (cols * tile_size, rows * tile_size))
+
+        for row in range(rows):
+            for col in range(cols):
+                combined_img.paste(tiles[row][col], (col * tile_size, row * tile_size))
+
+        return combined_img
+
+    @staticmethod
+    def calculate_zoom_level(
+        scale_denominator, pProjection, dpi=96, tile_width=256, tile_height=256
+    ):
+        """
+        Calculates the appropriate zoom level based on the scale denominator, CRS, and DPI.
+        """
+
+        pSpatial_reference_target = osr.SpatialReference()
+        pSpatial_reference_target.ImportFromWkt(pProjection)
+        meters_per_unit = pSpatial_reference_target.GetLinearUnits()
+
+        pixel_size_in_meters = 0.00028
+        pixel_span = (
+            scale_denominator * pixel_size_in_meters / meters_per_unit / (dpi / 96.0)
+        )
+
+        tile_span_x = tile_width * pixel_span
+        tile_span_y = tile_height * pixel_span
+
+        zoom_level = int(math.log2(40075016.68557849 / max(tile_span_x, tile_span_y)))
+
+        return zoom_level
+
+    @staticmethod
+    def _calculate_tile_extent_web_mercator(x: int, y: int, z: int) -> Tuple[float, float, float, float]:
+        """
+        Calculate the Web Mercator extent for a tile at given coordinates.
+
+        This is a fallback utility for cartopy tile sources when extent cannot be obtained
+        from the parent class. Web Mercator (EPSG:3857) bounds are ±20037508.34 meters.
+        """
+        world_extent = 20037508.342789244  # Web Mercator world extent
+        tile_width = (2 * world_extent) / (2 ** z)
+
+        min_x = -world_extent + (x * tile_width)
+        max_x = min_x + tile_width
+        max_y = world_extent - (y * tile_width)
+        min_y = max_y - tile_width
+
+        return (min_x, max_x, min_y, max_y)
+
+    @staticmethod
+    def _get_resample_filter(method: str):
+        """Get PIL resampling filter from method name.
+
+        Args:
+            method: Resampling method name - 'lanczos', 'bicubic', 'bilinear', 'nearest'
+
+        Returns:
+            PIL resampling filter constant
+        """
+        if Image is None:
+            raise ImportError("PIL/Pillow is required for resampling operations")
+
+        filters = {
+            'lanczos': Image.LANCZOS,
+            'bicubic': Image.BICUBIC,
+            'bilinear': Image.BILINEAR,
+            'nearest': Image.NEAREST
+        }
+        return filters.get(method.lower(), Image.LANCZOS)
 
     @classmethod
-    def get_provider_info(cls, provider: Optional[str] = None) -> Dict[str, Any]:
-        if provider:
-            if provider not in cls._PROVIDERS:
-                raise ValueError(f"Unknown provider '{provider}'")
-            return cls._PROVIDERS[provider].copy()
-        return {k: v.copy() for k, v in cls._PROVIDERS.items()}
+    def extent_to_tile_indices(
+        cls,
+        extent: List[float],
+        zoom: int
+    ) -> Tuple[int, int, int, int]:
+        """
+        Convert extent (minx, maxx, miny, maxy) to tile indices at a given zoom level.
 
-    def __repr__(self) -> str:
-        return f"VectorTileServer(provider='{self.provider}')"
+        Implemented as a classmethod so subclasses can override `lonlat_to_tile`.
+        """
+        minx, maxx, miny, maxy = extent
+        x_min, y_max = cls.lonlat_to_tile(minx, miny, zoom)
+        x_max, y_min = cls.lonlat_to_tile(maxx, maxy, zoom)
+        return x_min, y_min, x_max, y_max
+
+    @staticmethod
+    def combine_tiles(
+        tiles: List[List['Image.Image']],
+        tile_size: int
+    ) -> 'Image.Image':
+        """
+        Combine a 2D array of tile images into a single image.
+        """
+        rows = len(tiles)
+        cols = len(tiles[0]) if rows > 0 else 0
+
+        if rows == 0 or cols == 0:
+            return Image.new('RGBA', (tile_size, tile_size))
+
+        combined_img = Image.new('RGBA', (cols * tile_size, rows * tile_size))
+
+        for row in range(rows):
+            for col in range(cols):
+                combined_img.paste(tiles[row][col], (col * tile_size, row * tile_size))
+
+        return combined_img
+
+
+
+    def _validate_zoom_level(self, zoom_level: int, supersample: int = 0) -> Tuple[int, int]:
+        """Validate and adjust zoom + supersample against provider limits.
+
+        Returns (fetch_zoom, adjusted_supersample).
+        """
+        fetch_zoom = zoom_level + supersample
+        min_zoom = self._config.get('min_zoom', 0)
+        max_zoom = self._config.get('max_zoom', 18)
+
+        if zoom_level < min_zoom:
+            raise ValueError(f"{self.provider} does not support zoom level {zoom_level}. Minimum supported zoom is {min_zoom}.")
+        if zoom_level > max_zoom:
+            raise ValueError(f"{self.provider} does not support zoom level {zoom_level}. Maximum supported zoom is {max_zoom}.")
+
+        if fetch_zoom > max_zoom:
+            original_supersample = supersample
+            supersample = max(0, max_zoom - zoom_level)
+            warnings.warn(
+                f"{self.provider} maximum zoom level is {max_zoom}. Requested zoom {zoom_level} with supersample={original_supersample} would require zoom {fetch_zoom}. Automatically reducing supersample to {supersample}.",
+                UserWarning,
+            )
+            fetch_zoom = zoom_level + supersample
+
+        return fetch_zoom, supersample
+
+    @staticmethod
+    def calculate_zoom_level(
+        scale_denominator, pProjection, dpi=96, tile_width=256, tile_height=256
+    ):
+        """
+        Calculates the appropriate zoom level based on the scale denominator, CRS, and DPI.
+        """
+
+        pSpatial_reference_target = osr.SpatialReference()
+        pSpatial_reference_target.ImportFromWkt(pProjection)
+        meters_per_unit = pSpatial_reference_target.GetLinearUnits()
+
+        pixel_size_in_meters = 0.00028
+        pixel_span = (
+            scale_denominator * pixel_size_in_meters / meters_per_unit / (dpi / 96.0)
+        )
+
+        tile_span_x = tile_width * pixel_span
+        tile_span_y = tile_height * pixel_span
+
+        zoom_level = int(math.log2(40075016.68557849 / max(tile_span_x, tile_span_y)))
+
+        return zoom_level
+
+    @classmethod
+    def lonlat_to_tile(cls, lon: float, lat: float, zoom: int) -> Tuple[int, int]:
+        """
+        Convert longitude and latitude to tile indices at a given zoom level.
+        """
+        lat_rad = math.radians(lat)
+        n = 2.0 ** zoom
+        x_tile = int((lon + 180.0) / 360.0 * n)
+        y_tile = int(
+            (1.0 - math.log(math.tan(lat_rad) + (1 / math.cos(lat_rad))) / math.pi)
+            / 2.0
+            * n
+        )
+        return x_tile, y_tile
+
+
+    @staticmethod
+    def _calculate_tile_extent_web_mercator(x: int, y: int, z: int) -> Tuple[float, float, float, float]:
+        """
+        Calculate the Web Mercator extent for a tile at given coordinates.
+
+        This is a fallback utility for cartopy tile sources when extent cannot be obtained
+        from the parent class. Web Mercator (EPSG:3857) bounds are ±20037508.34 meters.
+
+        Args:
+            x: Tile X coordinate
+            y: Tile Y coordinate
+            z: Zoom level
+
+        Returns:
+            Tuple of (min_x, max_x, min_y, max_y) in Web Mercator meters
+        """
+        world_extent = 20037508.342789244  # Web Mercator world extent
+        tile_width = (2 * world_extent) / (2 ** z)
+
+        min_x = -world_extent + (x * tile_width)
+        max_x = min_x + tile_width
+        max_y = world_extent - (y * tile_width)
+        min_y = max_y - tile_width
+
+        return (min_x, max_x, min_y, max_y)
+
+    @staticmethod
+    def _get_resample_filter(method: str):
+        """Get PIL resampling filter from method name.
+
+        Args:
+            method: Resampling method name - 'lanczos', 'bicubic', 'bilinear', 'nearest'
+
+        Returns:
+            PIL resampling filter constant
+        """
+        if Image is None:
+            raise ImportError("PIL/Pillow is required for resampling operations")
+
+        filters = {
+            'lanczos': Image.LANCZOS,
+            'bicubic': Image.BICUBIC,
+            'bilinear': Image.BILINEAR,
+            'nearest': Image.NEAREST
+        }
+        return filters.get(method.lower(), Image.LANCZOS)
 

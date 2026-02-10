@@ -7,7 +7,7 @@ This script demonstrates the new unified API for working with tile servers.
 import os
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
-from pyearthviz.map.map_servers import RasterTileServer
+from pyearthviz.map.raster_map_servers import RasterTileServer
 
 
 def example_basic_usage():
