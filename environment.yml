@@ -1,0 +1,17 @@
+name: pyearthviz-env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python>=3.9
+  - numpy
+  - pandas
+  - scipy
+  - gdal
+  - matplotlib
+  - cartopy
+  - statsmodels
+  - pyearth>=0.2.1
+  - pip
+  - pip:
+    - -e .

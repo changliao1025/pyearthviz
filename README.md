@@ -7,11 +7,11 @@ A lightweight Python package for 2D visualization and plotting of geospatial and
 **Note:** PyEarthViz is part of the **PyEarthSuite** ecosystem. The original PyEarth package has been restructured into several specialized packages to keep each package lightweight and focused:
 
 - **[pyearth](https://github.com/changliao1025/pyearth)** - Core GIS operations, spatial toolbox, and system utilities
-- **pyearthviz** (this package) - 2D visualization utilities
-- **pyearthviz3d** - 3D visualization with GeoVista
-- **pyearthriver** - River network graph algorithms and data structures
-- **pyearthmesh** - Mesh generation and manipulation tools (currently not implemented)
-- **pyearthhelp** - Helper utilities for data access (NWIS, NLDI, GSIM) and HPC operations
+- **[pyearthviz](https://github.com/changliao1025/pyearthviz)** - 2D visualization utilities
+- **[pyearthviz3d](https://github.com/changliao1025/pyearthviz3d)** - 3D visualization with GeoVista
+- **[pyearthriver](https://github.com/changliao1025/pyearthriver)** - River network graph algorithms and data structures
+- **[pyearthmesh](https://github.com/changliao1025/pyearthmesh)** - Mesh generation and manipulation tools (currently not implemented)
+- **[pyearthhelp](https://github.com/changliao1025/pyearthhelp)** - Helper utilities for data access (NWIS, NLDI, GSIM) and HPC operations
 
 This modular approach allows you to install only what you need while maintaining the ability to use all packages together.
 
