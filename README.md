@@ -1,6 +1,7 @@
 ### PyEarthViz
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6109987.svg)](https://doi.org/10.5281/zenodo.6109987)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18797442.svg)](https://doi.org/10.5281/zenodo.18797442)
+[![PyPI version](https://badge.fury.io/py/pyearthviz.svg)](https://badge.fury.io/py/pyearthviz)
 
 A lightweight Python package for 2D visualization and plotting of geospatial and Earth science data.
 
@@ -187,10 +188,5 @@ Copyright © 2022, Battelle Memorial Institute
 
 If you make use of `PyEarthViz` in your work, please consider including a reference to the following:
 
-* Chang Liao. (2022). PyEarth: A lightweight Python package for Earth science (Software). Zenodo. https://doi.org/10.5281/zenodo.6109987
+* Chang Liao. (2026). PyEarthViz: A lightweight Python package for 2D visualization and plotting of geospatial and Earth science data. (Software). Zenodo. https://doi.org/10.5281/zenodo.Chang Liao
 
-PyEarthViz is supporting several research projects and publications, including:
-
-* Liao et al., (2023). pyflowline: a mesh-independent river network generator for hydrologic models. Journal of Open Source Software, 8(91), 5446, https://doi.org/10.21105/joss.05446
-
-* Liao. C. (2022). HexWatershed: a mesh independent flow direction model for hydrologic models (0.1.1). Zenodo. https://doi.org/10.5281/zenodo.6425881
