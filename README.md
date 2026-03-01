@@ -1,7 +1,6 @@
 ### PyEarthViz
 
 [![DOI](https://zenodo.org/badge/1137223209.svg)](https://doi.org/10.5281/zenodo.18797442)
-
 [![PyPI version](https://badge.fury.io/py/pyearthviz.svg)](https://badge.fury.io/py/pyearthviz)
 
 A lightweight Python package for 2D visualization and plotting of geospatial and Earth science data.
