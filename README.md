@@ -1,6 +1,7 @@
 ### PyEarthViz
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18797442.svg)](https://doi.org/10.5281/zenodo.18797442)
+[![DOI](https://zenodo.org/badge/1137223209.svg)](https://doi.org/10.5281/zenodo.18797442)
+
 [![PyPI version](https://badge.fury.io/py/pyearthviz.svg)](https://badge.fury.io/py/pyearthviz)
 
 A lightweight Python package for 2D visualization and plotting of geospatial and Earth science data.
@@ -156,16 +157,6 @@ Supporting functions for all plot types:
 - **Formatters**: Custom axis formatters for special data types
 - **XY plotting**: General-purpose XY data plotting
 
-### Related Packages in EarthSuite
-
-PyEarthViz works seamlessly with other EarthSuite packages:
-
-- **[pyearth](https://github.com/changliao1025/pyearth)** - Core GIS operations and spatial toolbox
-- **[pyearthviz3d](https://github.com/changliao1025/pyearthviz3d)** - 3D globe visualization with GeoVista
-- **[pyearthriver](https://github.com/changliao1025/pyearthriver)** - River network topology and graph algorithms
-- **[pyearthmesh](https://github.com/changliao1025/pyearthmesh)** - Advanced mesh generation tools
-- **[pyearthhelp](https://github.com/changliao1025/pyearthhelp)** - Data retrieval and HPC job management
-
 ### Acknowledgment
 
 This research was supported as part of the Next Generation Ecosystem Experiments-Tropics, funded by the U.S. Department of Energy, Office of Science, Office of Biological and Environmental Research at Pacific Northwest National Laboratory. The study was also partly supported by U.S. Department of Energy Office of Science Biological and Environmental Research through the Earth and Environmental System Modeling program as part of the Energy Exascale Earth System Model (E3SM) project.
@@ -188,5 +179,5 @@ Copyright © 2022, Battelle Memorial Institute
 
 If you make use of `PyEarthViz` in your work, please consider including a reference to the following:
 
-* Chang Liao. (2026). PyEarthViz: A lightweight Python package for 2D visualization and plotting of geospatial and Earth science data. (Software). Zenodo. https://doi.org/10.5281/zenodo.18797442
+* Chang Liao. (2026). PyEarthViz: A lightweight Python package for 2D visualization of Earth science data. (Software). Zenodo. https://doi.org/10.5281/zenodo.18797442
 
