@@ -34,6 +34,7 @@ def map_multiple_vector_files(
     aFiletype_in,
     aFilename_in,
     iFlag_title_in=None,
+    iFlag_coastline_in=None,
     iFlag_zebra_in=None,
     iFlag_filter_in=None,
     iFlag_arrow_in=None,
@@ -252,35 +253,41 @@ def map_multiple_vector_files(
 
     # we require that the first polygon file defines the extent
     pLayer = pDataset.GetLayer(0)
-    dLat_min = 90
-    dLat_max = -90
-    dLon_min = 180
-    dLon_max = -180
-    for pFeature in pLayer:
-        pGeometry_in = pFeature.GetGeometryRef()
-        sGeometry_type = pGeometry_in.GetGeometryName()
-        if sGeometry_type == "MULTIPOLYGON":
-            for j in range(pGeometry_in.GetGeometryCount()):
-                pPolygon = pGeometry_in.GetGeometryRef(j)
-                aCoords_gcs = get_geometry_coordinates(pPolygon)
-                dLon_max = float(np.max([dLon_max, np.max(aCoords_gcs[:, 0])]))
-                dLon_min = float(np.min([dLon_min, np.min(aCoords_gcs[:, 0])]))
-                dLat_max = float(np.max([dLat_max, np.max(aCoords_gcs[:, 1])]))
-                dLat_min = float(np.min([dLat_min, np.min(aCoords_gcs[:, 1])]))
-        else:
-            if sGeometry_type == "POLYGON":
-                aCoords_gcs = get_geometry_coordinates(pGeometry_in)
-                dLon_max = float(np.max([dLon_max, np.max(aCoords_gcs[:, 0])]))
-                dLon_min = float(np.min([dLon_min, np.min(aCoords_gcs[:, 0])]))
-                dLat_max = float(np.max([dLat_max, np.max(aCoords_gcs[:, 1])]))
-                dLat_min = float(np.min([dLat_min, np.min(aCoords_gcs[:, 1])]))
+    if aExtent_in is None:
+        dLat_min = 90
+        dLat_max = -90
+        dLon_min = 180
+        dLon_max = -180
+        for pFeature in pLayer:
+            pGeometry_in = pFeature.GetGeometryRef()
+            sGeometry_type = pGeometry_in.GetGeometryName()
+            if sGeometry_type == "MULTIPOLYGON":
+                for j in range(pGeometry_in.GetGeometryCount()):
+                    pPolygon = pGeometry_in.GetGeometryRef(j)
+                    aCoords_gcs = get_geometry_coordinates(pPolygon)
+                    dLon_max = float(np.max([dLon_max, np.max(aCoords_gcs[:, 0])]))
+                    dLon_min = float(np.min([dLon_min, np.min(aCoords_gcs[:, 0])]))
+                    dLat_max = float(np.max([dLat_max, np.max(aCoords_gcs[:, 1])]))
+                    dLat_min = float(np.min([dLat_min, np.min(aCoords_gcs[:, 1])]))
             else:
-                if sGeometry_type == "LINESTRING":
+                if sGeometry_type == "POLYGON":
                     aCoords_gcs = get_geometry_coordinates(pGeometry_in)
                     dLon_max = float(np.max([dLon_max, np.max(aCoords_gcs[:, 0])]))
                     dLon_min = float(np.min([dLon_min, np.min(aCoords_gcs[:, 0])]))
                     dLat_max = float(np.max([dLat_max, np.max(aCoords_gcs[:, 1])]))
                     dLat_min = float(np.min([dLat_min, np.min(aCoords_gcs[:, 1])]))
+                else:
+                    if sGeometry_type == "LINESTRING":
+                        aCoords_gcs = get_geometry_coordinates(pGeometry_in)
+                        dLon_max = float(np.max([dLon_max, np.max(aCoords_gcs[:, 0])]))
+                        dLon_min = float(np.min([dLon_min, np.min(aCoords_gcs[:, 0])]))
+                        dLat_max = float(np.max([dLat_max, np.max(aCoords_gcs[:, 1])]))
+                        dLat_min = float(np.min([dLat_min, np.min(aCoords_gcs[:, 1])]))
+    else:
+        dLon_min = aExtent_in[0]
+        dLon_max = aExtent_in[1]
+        dLat_min = aExtent_in[2]
+        dLat_max = aExtent_in[3]
 
     if pProjection_map_in is not None:
         pProjection_map = pProjection_map_in
@@ -300,7 +307,8 @@ def map_multiple_vector_files(
         [0.08, 0.1, 0.62, 0.7], projection=pProjection_map
     )  # projection=ccrs.PlateCarree()
     ax.set_global()
-    ax.coastlines(color="black", linewidth=1, resolution="10m")
+    if iFlag_coastline_in is not None:
+        ax.coastlines(color="black", linewidth=1, resolution="10m")
     # Create an OSM image tile source
     if aExtent_in is None:
         marginx = (dLon_max - dLon_min) / 20
@@ -373,6 +381,8 @@ def map_multiple_vector_files(
 
             # Combine all license info and display once
             if aLicense_info_list:
+                # Add PyEarthViz attribution
+                aLicense_info_list.append("Visualized by PyEarthViz")
                 sLicense_info = " | ".join(aLicense_info_list)
                 sLicense_info_wrapped = "\n".join(
                     textwrap.wrap(sLicense_info, width=cwidth)
