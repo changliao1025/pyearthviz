@@ -1,0 +1,22 @@
+<!DOCTYPE connections>
+<qgsXYZTilesConnections version="1.0">
+    <xyztiles password="" zmin="0" url="https://webst01.is.autonavi.com/appmaptile?style=6&amp;x={x}&amp;y={y}&amp;z={z}" authcfg="" referer="" tilePixelRatio="0" username="" zmax="18" name="Amap1"/>
+    <xyztiles password="" zmin="0" url="http://ecn.t3.tiles.virtualearth.net/tiles/a{q}.jpeg?g=1" authcfg="" referer="" tilePixelRatio="2" username="" zmax="18" name="Bing"/>
+    <xyztiles password="" zmin="0" url="http://services.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}" authcfg="" referer="" tilePixelRatio="0" username="" zmax="18" name="ESRI_Hillshade"/>
+    <xyztiles password="" zmin="-1" url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" authcfg="" referer="" tilePixelRatio="0" username="" zmax="-1" name="Esri Imagery"/>
+    <xyztiles password="" zmin="0" url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}" authcfg="" referer="" tilePixelRatio="0" username="" zmax="18" name="Esri Topo"/>
+    <xyztiles password="" zmin="0" url="https://webst01.is.autonavi.com/appmaptile?style=8&amp;x={x}&amp;y={y}&amp;z={z}" authcfg="" referer="" tilePixelRatio="0" username="" zmax="18" name="Gaode_road"/>
+    <xyztiles password="" zmin="0" url="https://webst01.is.autonavi.com/appmaptile?style=6&amp;x={x}&amp;y={y}&amp;z={z}" authcfg="" referer="" tilePixelRatio="0" username="" zmax="18" name="Gaode_sat"/>
+    <xyztiles password="" zmin="0" url="http://wprd04.is.autonavi.com/appmaptile?lang=zh_cn&amp;size=1&amp;style=7&amp;x={x}&amp;y={y}&amp;z={z}" authcfg="" referer="" tilePixelRatio="0" username="" zmax="18" name="Gaode_scn"/>
+    <xyztiles password="" zmin="0" url="https://webrd04.is.autonavi.com/appmaptile?lang=zh_cn&amp;size=1&amp;scale=1&amp;style=7&amp;x={x}&amp;y={y}&amp;z={z}" authcfg="" referer="" tilePixelRatio="1" username="" zmax="18" name="Gaode_vec"/>
+    <xyztiles password="" zmin="0" url="https://mt1.google.com/vt/lyrs=s&amp;x={x}&amp;y={y}&amp;z={z}" authcfg="" referer="" tilePixelRatio="0" username="" zmax="18" name="Google Satellite"/>
+    <xyztiles password="" zmin="0" url="https://mt1.google.com/vt/lyrs=m&amp;x={x}&amp;y={y}&amp;z={z}" authcfg="" referer="" tilePixelRatio="0" username="" zmax="18" name="Google Streets"/>
+    <xyztiles password="" zmin="0" url="http://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png " authcfg="" referer="" tilePixelRatio="0" username="" zmax="18" name="Humanitarian map style"/>
+    <xyztiles password="" zmin="0" url="https://tile.opentopomap.org/{z}/{x}/{y}.png" authcfg="" referer="" tilePixelRatio="0" username="" zmax="18" name="OpenTopoMap_contour"/>
+    <xyztiles password="" zmin="0" url="https://mapserver.mapy.cz/turist-m/{z}-{x}-{y}" authcfg="" referer="" tilePixelRatio="0" username="" zmax="18" name="Outdoor_Topo"/>
+    <xyztiles password="" zmin="0" url="https://rt{s}.map.gtimg.com/realtimerender?z={z}&amp;x={x}&amp;y={y}&amp;type=vector&amp;style=8" authcfg="" referer="" tilePixelRatio="0" username="" zmax="18" name="Tencent_terrain"/>
+    <xyztiles password="" zmin="0" url="https://t{s}.tianditu.gov.cn/DataServer?T=vec_w&amp;x={x}&amp;y={y}&amp;l={z}" authcfg="" referer="" tilePixelRatio="0" username="" zmax="18" name="Tiandi_vec"/>
+    <xyztiles password="" zmin="0" url="http://c.tile.stamen.com/watercolor/{z}/{x}/{y}.jpg" authcfg="" referer="" tilePixelRatio="0" username="" zmax="18" name="watercolor"/>
+    <xyztiles password="" zmin="0" url="https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png" authcfg="" referer="" tilePixelRatio="0" username="" zmax="18" name="wikimedia"/>
+    <xyztiles password="" zmin="0" url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" authcfg="" referer="" tilePixelRatio="0" username="" zmax="19" name="OpenStreetMap"/>
+</qgsXYZTilesConnections>

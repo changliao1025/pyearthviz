@@ -67,7 +67,41 @@ class RasterTileServer(BaseTileServer):
         >>> # With API key
         >>> server = RasterTileServer('Stadia.StamenTerrain', api_key='your_key')
         >>> tile = server.fetch_tile(z=10, x=163, y=395)
+        >>>
+        >>> # Register a token once, then call the provider without api_key
+        >>> RasterTileServer.register_api_key('Tianditu.Vector', 'your_tk_here')
+        >>> server = RasterTileServer('Tianditu.Vector')
     """
+
+    # Registered API keys/tokens, keyed by provider name. Used as a fallback
+    # when a provider is instantiated without an explicit api_key.
+    _REGISTERED_API_KEYS: Dict[str, str] = {}
+
+    @classmethod
+    def register_api_key(cls, provider: str, api_key: str) -> None:
+        """
+        Register a default API key/token for a provider.
+
+        Once registered, instances of the provider created without an explicit
+        api_key argument automatically use the registered key. Useful for
+        providers such as 'Tianditu.Vector' that require a tk token on every
+        request.
+
+        Args:
+            provider: Provider name (e.g., 'Tianditu.Vector')
+            api_key: API key/token to register for this provider
+
+        Raises:
+            ValueError: If provider name is not recognized
+
+        Example:
+            >>> RasterTileServer.register_api_key('Tianditu.Vector', 'your_tk_here')
+            >>> server = RasterTileServer('Tianditu.Vector')  # uses registered token
+        """
+        if provider not in cls._PROVIDERS:
+            available = ', '.join(cls._PROVIDERS.keys())
+            raise ValueError(f"Unknown provider '{provider}'. Available providers: {available}")
+        cls._REGISTERED_API_KEYS[provider] = api_key
 
     # Provider registry with configuration for each tile server
     _PROVIDERS = {
@@ -251,6 +285,180 @@ class RasterTileServer(BaseTileServer):
             'attribution': '© OpenStreetMap contributors',
             'license_url': 'https://www.openstreetmap.org/copyright',
             'data_source': 'OpenStreetMap'
+        },
+        'OSM.HOT': {
+            'url_template': 'http://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+            'tile_size': 256,
+            'requires_api_key': False,
+            'special_handling': None,
+            'description': 'OpenStreetMap Humanitarian map style',
+            'min_zoom': 0,
+            'max_zoom': 18,
+            'attribution': '© OpenStreetMap contributors, Humanitarian OSM Team',
+            'license_url': 'https://www.openstreetmap.org/copyright',
+            'data_source': 'OpenStreetMap'
+        },
+        'OpenTopoMap.Contour': {
+            'url_template': 'https://tile.opentopomap.org/{z}/{x}/{y}.png',
+            'tile_size': 256,
+            'requires_api_key': False,
+            'special_handling': None,
+            'description': 'OpenTopoMap topographic map with contours',
+            'min_zoom': 0,
+            'max_zoom': 18,
+            'attribution': '© OpenTopoMap (CC-BY-SA), © OpenStreetMap contributors',
+            'license_url': 'https://opentopomap.org/about',
+            'data_source': 'OpenStreetMap/SRTM'
+        },
+        'Esri.Hillshade': {
+            'url_template': 'https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}',
+            'tile_size': 256,
+            'requires_api_key': False,
+            'special_handling': None,
+            'description': 'Esri World Hillshade',
+            'min_zoom': 0,
+            'max_zoom': 18,
+            'attribution': 'Source: Esri',
+            'license_url': 'https://www.esri.com/en-us/legal/terms/full-master-agreement',
+            'data_source': 'Esri'
+        },
+        'Bing.Aerial': {
+            'url_template': 'http://ecn.t3.tiles.virtualearth.net/tiles/a{q}.jpeg?g=1',
+            'url_type': 'quadkey',
+            'tile_size': 256,
+            'requires_api_key': False,
+            'special_handling': None,
+            'description': 'Bing aerial imagery (quadkey tiles)',
+            'min_zoom': 0,
+            'max_zoom': 18,
+            'attribution': '© Microsoft Bing',
+            'license_url': 'https://www.microsoft.com/en-us/maps/product',
+            'data_source': 'Bing'
+        },
+        'Google.Satellite': {
+            'url_template': 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+            'tile_size': 256,
+            'requires_api_key': False,
+            'special_handling': None,
+            'description': 'Google satellite imagery',
+            'min_zoom': 0,
+            'max_zoom': 18,
+            'attribution': '© Google',
+            'license_url': 'https://www.google.com/permissions/geoguidelines/',
+            'data_source': 'Google'
+        },
+        'Google.Streets': {
+            'url_template': 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+            'tile_size': 256,
+            'requires_api_key': False,
+            'special_handling': None,
+            'description': 'Google streets map',
+            'min_zoom': 0,
+            'max_zoom': 18,
+            'attribution': '© Google',
+            'license_url': 'https://www.google.com/permissions/geoguidelines/',
+            'data_source': 'Google'
+        },
+        'Amap.Satellite': {
+            'url_template': 'https://webst01.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}',
+            'tile_size': 256,
+            'requires_api_key': False,
+            'special_handling': None,
+            'description': 'Amap (Gaode) satellite imagery',
+            'min_zoom': 0,
+            'max_zoom': 18,
+            'attribution': '© Amap (AutoNavi)',
+            'license_url': 'https://lbs.amap.com/pages/terms/',
+            'data_source': 'Amap/AutoNavi'
+        },
+        'Amap.Road': {
+            'url_template': 'https://webst01.is.autonavi.com/appmaptile?style=8&x={x}&y={y}&z={z}',
+            'tile_size': 256,
+            'requires_api_key': False,
+            'special_handling': None,
+            'description': 'Amap (Gaode) road map',
+            'min_zoom': 0,
+            'max_zoom': 18,
+            'attribution': '© Amap (AutoNavi)',
+            'license_url': 'https://lbs.amap.com/pages/terms/',
+            'data_source': 'Amap/AutoNavi'
+        },
+        'Amap.Scene': {
+            'url_template': 'http://wprd04.is.autonavi.com/appmaptile?lang=zh_cn&size=1&style=7&x={x}&y={y}&z={z}',
+            'tile_size': 256,
+            'requires_api_key': False,
+            'special_handling': None,
+            'description': 'Amap (Gaode) scene map (Chinese labels)',
+            'min_zoom': 0,
+            'max_zoom': 18,
+            'attribution': '© Amap (AutoNavi)',
+            'license_url': 'https://lbs.amap.com/pages/terms/',
+            'data_source': 'Amap/AutoNavi'
+        },
+        'Amap.Vector': {
+            'url_template': 'https://webrd04.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=7&x={x}&y={y}&z={z}',
+            'tile_size': 256,
+            'requires_api_key': False,
+            'special_handling': None,
+            'description': 'Amap (Gaode) vector map (Chinese labels)',
+            'min_zoom': 0,
+            'max_zoom': 18,
+            'attribution': '© Amap (AutoNavi)',
+            'license_url': 'https://lbs.amap.com/pages/terms/',
+            'data_source': 'Amap/AutoNavi'
+        },
+        'Tencent.Terrain': {
+            'url_template': 'https://rt0.map.gtimg.com/realtimerender?z={z}&x={x}&y={y}&type=vector&style=8',
+            'tile_size': 256,
+            'requires_api_key': False,
+            'special_handling': None,
+            'description': 'Tencent terrain map',
+            'min_zoom': 0,
+            'max_zoom': 18,
+            'attribution': '© Tencent Maps',
+            'license_url': 'https://lbs.qq.com/terms.html',
+            'data_source': 'Tencent'
+        },
+        'Tianditu.Vector': {
+            'url_template': 'https://t0.tianditu.gov.cn/DataServer?T=vec_w&x={x}&y={y}&l={z}&tk={api_key}',
+            'tile_size': 256,
+            'requires_api_key': True,
+            'api_env': 'TIANDITU_TOKEN',
+            'special_handling': None,
+            'description': 'Tianditu vector map (requires a free tk token from https://console.tianditu.gov.cn/api/key)',
+            'min_zoom': 0,
+            'max_zoom': 18,
+            'attribution': '© Tianditu',
+            'license_url': 'https://www.tianditu.gov.cn/',
+            'data_source': 'Tianditu',
+            'headers': {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Referer': 'https://www.tianditu.gov.cn/'
+            }
+        },
+        'MapyCz.Outdoor': {
+            'url_template': 'https://mapserver.mapy.cz/turist-m/{z}-{x}-{y}',
+            'tile_size': 256,
+            'requires_api_key': False,
+            'special_handling': None,
+            'description': 'Mapy.cz outdoor topographic map',
+            'min_zoom': 0,
+            'max_zoom': 18,
+            'attribution': '© Mapy.cz, © Seznam.cz',
+            'license_url': 'https://mapy.cz/',
+            'data_source': 'Mapy.cz'
+        },
+        'Wikimedia': {
+            'url_template': 'https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png',
+            'tile_size': 256,
+            'requires_api_key': False,
+            'special_handling': None,
+            'description': 'Wikimedia Maps (OSM international style)',
+            'min_zoom': 0,
+            'max_zoom': 18,
+            'attribution': '© Wikimedia Maps, © OpenStreetMap contributors',
+            'license_url': 'https://www.openstreetmap.org/copyright',
+            'data_source': 'OpenStreetMap'
         }
     }
 
@@ -278,8 +486,38 @@ class RasterTileServer(BaseTileServer):
                 "Install them with: pip install requests Pillow"
             )
 
+        # Fall back to a registered key/token if none was passed explicitly
+        if api_key is None:
+            api_key = self._REGISTERED_API_KEYS.get(provider)
+
         # Delegate provider validation, config and API-key handling to BaseTileServer
         super().__init__(provider, api_key)
+
+    def _build_tile_url(self, z: int, x: int, y: int) -> str:
+        """Format the configured URL template for a tile.
+
+        Extends the base implementation to support quadkey-style providers
+        (e.g., Bing) whose URL templates use a `{q}` placeholder instead of
+        `{z}`/`{x}`/`{y}`.
+        """
+        if self._config.get('url_type') == 'quadkey':
+            quadkey = self._to_quadkey(x, y, z)
+            return self.get_url_template().format(q=quadkey)
+        return super()._build_tile_url(z, x, y)
+
+    @staticmethod
+    def _to_quadkey(x: int, y: int, z: int) -> str:
+        """Convert tile coordinates to a Bing Maps quadkey string."""
+        digits = []
+        for i in range(z, 0, -1):
+            digit = 0
+            mask = 1 << (i - 1)
+            if x & mask:
+                digit += 1
+            if y & mask:
+                digit += 2
+            digits.append(str(digit))
+        return ''.join(digits)
 
     def fetch_tile(self, z: int, x: int, y: int) -> 'Image.Image':
         """
@@ -301,7 +539,7 @@ class RasterTileServer(BaseTileServer):
             >>> tile = server.fetch_tile(z=10, x=163, y=395)
         """
         url = self._build_tile_url(z, x, y)
-        response = requests.get(url)
+        response = requests.get(url, headers=self._get_request_headers())
 
         if response.status_code == 200:
             img = Image.open(BytesIO(response.content))
@@ -448,18 +686,23 @@ class RasterTileServer(BaseTileServer):
                 fetch_x = x * scale
                 fetch_y = y * scale
 
-                return config['url_template'].format(z=fetch_z, x=fetch_x, y=fetch_y, api_key=api_key or '')
+                return parent_instance._build_tile_url(fetch_z, fetch_x, fetch_y)
 
             def get_image(self, tile):
                 x, y, z = tile
 
-                # If no supersample requested, defer to parent behaviour and apply special handling
+                # If no supersample requested, fetch directly with proper headers
+                # (the base class fetches via urllib without a User-Agent, which
+                # some providers such as Tianditu reject with HTTP 418)
                 if not supersample or supersample <= 0:
-                    result = super().get_image(tile)
-                    img, extent, origin = result
+                    img = parent_instance.fetch_tile(z, x, y)
+                    try:
+                        extent = self.tileextent(tile)
+                    except Exception:
+                        extent = BaseTileServer._calculate_tile_extent_web_mercator(x, y, z)
                     if config.get('special_handling'):
                         img = parent_instance._apply_special_handling(img)
-                    return img, extent, origin
+                    return img, extent, 'lower'
 
                 # Compute actual supersample level respecting provider max_zoom
                 fetch_z = z + supersample
@@ -470,11 +713,14 @@ class RasterTileServer(BaseTileServer):
                     fetch_z = max_zoom
 
                 if actual_supersample <= 0:
-                    result = super().get_image(tile)
-                    img, extent, origin = result
+                    img = parent_instance.fetch_tile(z, x, y)
+                    try:
+                        extent = self.tileextent(tile)
+                    except Exception:
+                        extent = BaseTileServer._calculate_tile_extent_web_mercator(x, y, z)
                     if config.get('special_handling'):
                         img = parent_instance._apply_special_handling(img)
-                    return img, extent, origin
+                    return img, extent, 'lower'
 
                 scale = 2 ** actual_supersample
 
@@ -505,14 +751,13 @@ class RasterTileServer(BaseTileServer):
                 target_size = parent_instance.tile_size
                 combined_img = combined_img.resize((target_size, target_size), resample=resample_filter)
 
-                # Try to obtain extent from parent, use base class fallback if needed
+                # Compute tile extent geometrically (no network fetch)
                 try:
-                    _, extent, origin = super().get_image(tile)
+                    extent = self.tileextent(tile)
                 except Exception:
                     extent = BaseTileServer._calculate_tile_extent_web_mercator(x, y, z)
-                    origin = 'upper'
 
-                return combined_img, extent, origin
+                return combined_img, extent, 'lower'
 
         return UnifiedTileSource()
 
@@ -662,6 +907,21 @@ class RasterTileServer(BaseTileServer):
         suggested_zoom = max(min_zoom, min(max_zoom, suggested_zoom))
 
         return suggested_zoom
+
+    def _get_request_headers(self) -> Dict[str, str]:
+        """Return HTTP headers used for tile requests.
+
+        Some providers (e.g., Tianditu) reject requests carrying the default
+        Python User-Agent with HTTP 418. A browser-like User-Agent is sent by
+        default, and providers may supply custom 'headers' in their config.
+        """
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                          'AppleWebKit/537.36 (KHTML, like Gecko) '
+                          'Chrome/120.0.0.0 Safari/537.36'
+        }
+        headers.update(self._config.get('headers') or {})
+        return headers
 
     def _apply_special_handling(self, img: 'Image.Image') -> 'Image.Image':
         """Apply provider-specific image processing."""
