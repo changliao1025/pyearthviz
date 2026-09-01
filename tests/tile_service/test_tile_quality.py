@@ -12,6 +12,23 @@ from pyearthviz.map import RasterTileServer
 OUTPUT_DIR = 'test_output'
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+def test_combine_tiles_handles_empty_rows():
+    """A partially empty tile grid should still produce a valid output image."""
+    red_tile = Image.new('RGBA', (256, 256), (255, 0, 0, 255))
+    blank_tile = Image.new('RGBA', (256, 256), (0, 0, 0, 0))
+
+    tiles = [
+        [red_tile, blank_tile],
+        [],
+        [red_tile]
+    ]
+
+    combined = RasterTileServer.combine_tiles(tiles, 256)
+
+    assert combined.size == (512, 768), f"Unexpected size: {combined.size}"
+    assert np.array(combined).shape[2] == 4, "Combined image should remain RGBA"
+
+
 def test_basic_tile_fetch():
     """Test basic tile fetching with quality improvements."""
     print("Test 1: Basic tile fetch with quality improvements...")

@@ -519,6 +519,28 @@ class RasterTileServer(BaseTileServer):
             digits.append(str(digit))
         return ''.join(digits)
 
+    def _normalize_tile_image(self, img: 'Image.Image', *, fallback_size: Optional[Tuple[int, int]] = None) -> 'Image.Image':
+        """Return a valid image tile even when a provider sends a zero-sized or malformed payload."""
+        if img is None:
+            return Image.new('RGBA', fallback_size or (self.tile_size, self.tile_size), (0, 0, 0, 0))
+
+        try:
+            width, height = img.size
+        except Exception:
+            width, height = 0, 0
+
+        if width <= 0 or height <= 0:
+            blank = Image.new('RGBA', fallback_size or (self.tile_size, self.tile_size), (0, 0, 0, 0))
+            return blank
+
+        if img.mode != 'RGBA':
+            img = img.convert('RGBA')
+
+        if self._config.get('special_handling'):
+            img = self._apply_special_handling(img)
+
+        return img
+
     def fetch_tile(self, z: int, x: int, y: int) -> 'Image.Image':
         """
         Fetch a single tile at the specified zoom level and tile coordinates.
@@ -542,13 +564,13 @@ class RasterTileServer(BaseTileServer):
         response = requests.get(url, headers=self._get_request_headers())
 
         if response.status_code == 200:
-            img = Image.open(BytesIO(response.content))
+            try:
+                img = Image.open(BytesIO(response.content))
+                img.load()
+            except Exception:
+                return Image.new('RGBA', (self.tile_size, self.tile_size), (0, 0, 0, 0))
 
-            # Apply special handling if needed
-            if self._config['special_handling']:
-                img = self._apply_special_handling(img)
-
-            return img
+            return self._normalize_tile_image(img)
         else:
             raise Exception(
                 f"Failed to fetch tile from {self.provider}: "
@@ -700,9 +722,8 @@ class RasterTileServer(BaseTileServer):
                         extent = self.tileextent(tile)
                     except Exception:
                         extent = BaseTileServer._calculate_tile_extent_web_mercator(x, y, z)
-                    if config.get('special_handling'):
-                        img = parent_instance._apply_special_handling(img)
-                    return img, extent, 'lower'
+                    img = parent_instance._normalize_tile_image(img)
+                    return img, extent, 'upper'
 
                 # Compute actual supersample level respecting provider max_zoom
                 fetch_z = z + supersample
@@ -718,9 +739,8 @@ class RasterTileServer(BaseTileServer):
                         extent = self.tileextent(tile)
                     except Exception:
                         extent = BaseTileServer._calculate_tile_extent_web_mercator(x, y, z)
-                    if config.get('special_handling'):
-                        img = parent_instance._apply_special_handling(img)
-                    return img, extent, 'lower'
+                    img = parent_instance._normalize_tile_image(img)
+                    return img, extent, 'upper'
 
                 scale = 2 ** actual_supersample
 
@@ -757,7 +777,7 @@ class RasterTileServer(BaseTileServer):
                 except Exception:
                     extent = BaseTileServer._calculate_tile_extent_web_mercator(x, y, z)
 
-                return combined_img, extent, 'lower'
+                return combined_img, extent, 'upper'
 
         return UnifiedTileSource()
 
@@ -1007,18 +1027,27 @@ class RasterTileServer(BaseTileServer):
     ) -> 'Image.Image':
         """
         Combine a 2D array of tile images into a single image.
-        """
-        rows = len(tiles)
-        cols = len(tiles[0]) if rows > 0 else 0
 
-        if rows == 0 or cols == 0:
+        Empty rows or partially missing tiles can occur when a requested tile is
+        unavailable or fetch fails. Treat those as transparent placeholders to
+        keep the output image dimensions valid and avoid NumPy broadcast errors.
+        """
+        valid_rows = [row for row in tiles if row]
+        if not valid_rows:
             return Image.new('RGBA', (tile_size, tile_size))
 
-        combined_img = Image.new('RGBA', (cols * tile_size, rows * tile_size))
+        max_cols = max(len(row) for row in valid_rows)
+        if max_cols == 0:
+            return Image.new('RGBA', (tile_size, tile_size))
 
-        for row in range(rows):
-            for col in range(cols):
-                combined_img.paste(tiles[row][col], (col * tile_size, row * tile_size))
+        combined_img = Image.new('RGBA', (max_cols * tile_size, len(valid_rows) * tile_size))
+
+        for row_index, row in enumerate(valid_rows):
+            for col_index in range(max_cols):
+                tile = row[col_index] if col_index < len(row) else None
+                if tile is None:
+                    tile = Image.new('RGBA', (tile_size, tile_size), (0, 0, 0, 0))
+                combined_img.paste(tile, (col_index * tile_size, row_index * tile_size))
 
         return combined_img
 
@@ -1100,28 +1129,6 @@ class RasterTileServer(BaseTileServer):
         x_min, y_max = cls.lonlat_to_tile(minx, miny, zoom)
         x_max, y_min = cls.lonlat_to_tile(maxx, maxy, zoom)
         return x_min, y_min, x_max, y_max
-
-    @staticmethod
-    def combine_tiles(
-        tiles: List[List['Image.Image']],
-        tile_size: int
-    ) -> 'Image.Image':
-        """
-        Combine a 2D array of tile images into a single image.
-        """
-        rows = len(tiles)
-        cols = len(tiles[0]) if rows > 0 else 0
-
-        if rows == 0 or cols == 0:
-            return Image.new('RGBA', (tile_size, tile_size))
-
-        combined_img = Image.new('RGBA', (cols * tile_size, rows * tile_size))
-
-        for row in range(rows):
-            for col in range(cols):
-                combined_img.paste(tiles[row][col], (col * tile_size, row * tile_size))
-
-        return combined_img
 
 
 

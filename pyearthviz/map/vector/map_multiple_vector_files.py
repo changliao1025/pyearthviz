@@ -239,17 +239,22 @@ def map_multiple_vector_files(
     else:
         aVariable = aVariable_in
 
+    if sFilename_output_in is None:
+        plt.ion()
+
     plt.rcParams["font.family"] = "DeJavu Serif"
     plt.rcParams["font.serif"] = sFont
     plt.rcParams["mathtext.fontset"] = "dejavuserif"
 
-    cmap = plt.colormaps[sColormap]
+    
     fig = plt.figure(dpi=iDPI)
     fig.set_figwidth(iSize_x)
     fig.set_figheight(iSize_y)
     plot_width_inch = fig.get_size_inches()[0] * fig.dpi
     char_width_inch = 0.1 * fig.dpi
     cwidth = int(plot_width_inch / char_width_inch)
+
+    cmap = plt.colormaps[sColormap]
 
     # we require that the first polygon file defines the extent
     pLayer = pDataset.GetLayer(0)

@@ -30,10 +30,6 @@ osr.UseExceptions()
 iYear_current = datetime.datetime.now().year
 sYear = str(iYear_current)
 
-#use environment variable to store the tianditu token
-
-tianditu_tk = os.environ.get('TIANDITU_TOKEN')
-
 def simplify_coordinates(aCoords_gcs, min_distance=1.0):
     """
     Simplify a set of geographic coordinates by retaining points that are at least
@@ -455,10 +451,7 @@ def map_vector_polygon_file(
                     # Collect OSM attribution
                     aLicense_info_list.append("© OpenStreetMap contributors")
                 else:
-                    # Use RasterTileServer for custom providers
-                    if sBasemap_provider == 'Tianditu.Vector':
-                        RasterTileServer.register_api_key('Tianditu.Vector', tianditu_tk)
-                    
+                    # Use RasterTileServer for custom providers              
                     pTile_service = RasterTileServer(sBasemap_provider)
                     pTiles = pTile_service.get_cartopy_source()
                     ax.add_image(pTiles, iBasemap_zoom_level, alpha=dAlpha - i * 0.1)
