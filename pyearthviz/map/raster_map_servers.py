@@ -26,7 +26,7 @@ Example:
     >>> # List available providers
     >>> providers = RasterTileServer.get_available_providers()
 """
-
+import os
 from io import BytesIO
 from typing import List, Tuple, Optional, Dict, Any
 from datetime import datetime
@@ -109,6 +109,7 @@ class RasterTileServer(BaseTileServer):
             'url_template': 'https://tiles.stadiamaps.com/tiles/stamen_terrain/{z}/{x}/{y}@2x.png?api_key={api_key}',
             'tile_size': 512,
             'requires_api_key': True,
+            'api_env': 'STADIA_API_KEY',
             'special_handling': None,
             'description': 'Stadia Maps terrain tiles (formerly Stamen)',
             'min_zoom': 0,
@@ -121,6 +122,7 @@ class RasterTileServer(BaseTileServer):
             'url_template': 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}@2x.png?api_key={api_key}',
             'tile_size': 512,
             'requires_api_key': True,
+            'api_env': 'STADIA_API_KEY',
             'special_handling': None,
             'description': 'Stadia Maps smooth basemap',
             'min_zoom': 0,
@@ -486,12 +488,67 @@ class RasterTileServer(BaseTileServer):
                 "Install them with: pip install requests Pillow"
             )
 
-        # Fall back to a registered key/token if none was passed explicitly
-        if api_key is None:
-            api_key = self._REGISTERED_API_KEYS.get(provider)
+        requires_api_key = self._PROVIDERS.get(provider, {}).get('requires_api_key', False)
 
-        # Delegate provider validation, config and API-key handling to BaseTileServer
-        super().__init__(provider, api_key)
+        if requires_api_key:
+            if api_key is None:
+                api_key = self._REGISTERED_API_KEYS.get(provider)
+
+            if api_key is None:
+                env_key = self._PROVIDERS[provider].get('api_env')
+                if env_key:
+                    api_key = os.environ.get(env_key)
+
+            if api_key is None:
+                warnings.warn(
+                    f"Provider '{provider}' requires an API key. Provide it via api_key parameter or {self._PROVIDERS[provider].get('api_env')} environment variable.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                self.is_accessible = False
+                return
+
+            self._REGISTERED_API_KEYS[provider] = api_key
+
+        super().__init__(provider, api_key=api_key)
+
+        self.is_accessible = self.check_accessibility()
+        if not self.is_accessible:
+            warnings.warn(
+                f"Tile server '{self.provider}' is not accessible. The instance was created but tile requests may fail.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+    def check_accessibility(self, timeout: float = 10.0, z: int = 0, x: int = 0, y: int = 0) -> bool:
+        """Check whether the configured tile endpoint responds within a timeout."""
+        if requests is None:
+            warnings.warn(
+                "Tile accessibility check could not run because the 'requests' package is unavailable.",
+                UserWarning,
+            )
+            return False
+
+        url = self._build_tile_url(z, x, y)
+        try:
+            response = requests.get(url, headers=self._get_request_headers(), timeout=timeout)
+        except Exception as exc:  # pragma: no cover - depends on network conditions
+            warnings.warn(
+                f"Tile server '{self.provider}' is not accessible at {url}: {exc}",
+                UserWarning,
+                stacklevel=2,
+            )
+            return False
+
+        if response.status_code in (200, 204, 206):
+            return True
+
+        warnings.warn(
+            f"Tile server '{self.provider}' is not accessible. HTTP {response.status_code} from {url}.",
+            UserWarning,
+            stacklevel=2,
+        )
+        return False
 
     def _build_tile_url(self, z: int, x: int, y: int) -> str:
         """Format the configured URL template for a tile.
@@ -521,8 +578,15 @@ class RasterTileServer(BaseTileServer):
 
     def _normalize_tile_image(self, img: 'Image.Image', *, fallback_size: Optional[Tuple[int, int]] = None) -> 'Image.Image':
         """Return a valid image tile even when a provider sends a zero-sized or malformed payload."""
+        target_size = fallback_size or (self.tile_size, self.tile_size)
+
         if img is None:
-            return Image.new('RGBA', fallback_size or (self.tile_size, self.tile_size), (0, 0, 0, 0))
+            warnings.warn(
+                "Tile payload was missing; creating a transparent fallback tile at the expected tile size instead of a zero-sized image.",
+                UserWarning,
+                stacklevel=2,
+            )
+            return Image.new('RGBA', target_size, (0, 0, 0, 0))
 
         try:
             width, height = img.size
@@ -530,11 +594,23 @@ class RasterTileServer(BaseTileServer):
             width, height = 0, 0
 
         if width <= 0 or height <= 0:
-            blank = Image.new('RGBA', fallback_size or (self.tile_size, self.tile_size), (0, 0, 0, 0))
-            return blank
+            warnings.warn(
+                "Tile payload had a non-positive size; creating a transparent fallback tile at the expected tile size instead of a zero-sized image.",
+                UserWarning,
+                stacklevel=2,
+            )
+            return Image.new('RGBA', target_size, (0, 0, 0, 0))
 
         if img.mode != 'RGBA':
             img = img.convert('RGBA')
+
+        if img.size != target_size:
+            warnings.warn(
+                f"Tile payload size {img.size} did not match the expected tile size {target_size}; resizing to the expected tile dimensions before returning it.",
+                UserWarning,
+                stacklevel=2,
+            )
+            img = img.resize(target_size, resample=Image.NEAREST)
 
         if self._config.get('special_handling'):
             img = self._apply_special_handling(img)
@@ -568,7 +644,12 @@ class RasterTileServer(BaseTileServer):
                 img = Image.open(BytesIO(response.content))
                 img.load()
             except Exception:
-                return Image.new('RGBA', (self.tile_size, self.tile_size), (0, 0, 0, 0))
+                warnings.warn(
+                    f"Tile fetch from {self.provider} at z={z}, x={x}, y={y} could not be decoded; returning a transparent fallback tile at the expected size.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                return self._normalize_tile_image(None)
 
             return self._normalize_tile_image(img)
         else:
@@ -580,22 +661,30 @@ class RasterTileServer(BaseTileServer):
     def fetch_tiles_for_extent(
         self,
         extent: List[float],
-        zoom_level: int,
+        zoom_level: Optional[int] = None,
         supersample: int = 0,
         resample: bool = True,
-        resample_method: str = 'lanczos'
+        resample_method: str = 'lanczos',
+        output_size: Optional[Tuple[int, int]] = None,
+        output_dpi: int = 96,
+        quality_preference: str = 'balanced'
     ) -> np.ndarray:
         """
         Fetch and combine all tiles needed to cover the specified extent.
 
         Args:
             extent: [minx, maxx, miny, maxy] in longitude/latitude (degrees)
-            zoom_level: Tile zoom level (typically 1-18)
+            zoom_level: Optional tile zoom level. If omitted, the function chooses
+                an appropriate zoom level automatically using the current extent and
+                output requirements.
             supersample: Super-sampling level (0=off, 1=fetch 2x zoom and downsample,
                         2=fetch 4x zoom). Higher values provide better quality but
                         require downloading 4^supersample more tiles.
             resample: Apply high-quality resampling filter for smooth appearance
             resample_method: Resampling method - 'lanczos' (best), 'bicubic', 'bilinear', 'nearest'
+            output_size: Optional output image size used when deriving a zoom level.
+            output_dpi: DPI used when deriving a zoom level.
+            quality_preference: 'fast', 'balanced', or 'quality' used when picking a zoom.
 
         Returns:
             NumPy array of the combined image (RGBA format)
@@ -609,11 +698,23 @@ class RasterTileServer(BaseTileServer):
             >>> extent = [-122.5, -122.3, 37.7, 37.8]  # San Francisco area
             >>> # Standard quality
             >>> image_array = server.fetch_tiles_for_extent(extent, zoom_level=12)
+            >>> # Let the library pick the zoom automatically
+            >>> image_array = server.fetch_tiles_for_extent(extent)
             >>> # High quality with super-sampling (recommended)
             >>> image_array = server.fetch_tiles_for_extent(
             ...     extent, zoom_level=12, supersample=1, resample=True
             ... )
         """
+        if zoom_level is None:
+            if output_size is None:
+                output_size = (1200, 1200)
+            zoom_level = self.suggest_optimal_zoom(
+                extent,
+                output_dpi=output_dpi,
+                output_size=output_size,
+                quality_preference=quality_preference,
+            )
+
         # Validate and adjust zoom levels if needed
         fetch_zoom, supersample = self._validate_zoom_level(zoom_level, supersample)
 
@@ -640,8 +741,8 @@ class RasterTileServer(BaseTileServer):
             # Calculate target size (what it would have been at original zoom)
             original_x_min, original_y_min, original_x_max, original_y_max = \
                 RasterTileServer.extent_to_tile_indices(extent, zoom_level)
-            target_width = (original_x_max - original_x_min + 1) * self.tile_size
-            target_height = (original_y_max - original_y_min + 1) * self.tile_size
+            target_width = max(1, (original_x_max - original_x_min + 1) * self.tile_size)
+            target_height = max(1, (original_y_max - original_y_min + 1) * self.tile_size)
 
             # Downsample with high-quality filter (always use LANCZOS for downsampling)
             resample_filter = self._get_resample_filter('lanczos')
@@ -713,17 +814,27 @@ class RasterTileServer(BaseTileServer):
             def get_image(self, tile):
                 x, y, z = tile
 
+                def _safe_extent_for_tile(tile_x, tile_y, tile_z):
+                    try:
+                        extent = self.tileextent((tile_x, tile_y, tile_z))
+                        if extent is None or len(extent) != 4:
+                            raise ValueError('invalid extent')
+                        if not all(np.isfinite(np.asarray(extent, dtype=float))):
+                            raise ValueError('non-finite extent values')
+                        return extent
+                    except Exception:
+                        return BaseTileServer._calculate_tile_extent_web_mercator(tile_x, tile_y, tile_z)
+
                 # If no supersample requested, fetch directly with proper headers
                 # (the base class fetches via urllib without a User-Agent, which
                 # some providers such as Tianditu reject with HTTP 418)
                 if not supersample or supersample <= 0:
                     img = parent_instance.fetch_tile(z, x, y)
-                    try:
-                        extent = self.tileextent(tile)
-                    except Exception:
-                        extent = BaseTileServer._calculate_tile_extent_web_mercator(x, y, z)
                     img = parent_instance._normalize_tile_image(img)
-                    return img, extent, 'upper'
+                    if img.size[0] <= 0 or img.size[1] <= 0:
+                        img = Image.new('RGBA', (parent_instance.tile_size, parent_instance.tile_size), (0, 0, 0, 0))
+                    extent = _safe_extent_for_tile(x, y, z)
+                    return img, extent, 'lower'
 
                 # Compute actual supersample level respecting provider max_zoom
                 fetch_z = z + supersample
@@ -735,11 +846,10 @@ class RasterTileServer(BaseTileServer):
 
                 if actual_supersample <= 0:
                     img = parent_instance.fetch_tile(z, x, y)
-                    try:
-                        extent = self.tileextent(tile)
-                    except Exception:
-                        extent = BaseTileServer._calculate_tile_extent_web_mercator(x, y, z)
                     img = parent_instance._normalize_tile_image(img)
+                    if img.size[0] <= 0 or img.size[1] <= 0:
+                        img = Image.new('RGBA', (parent_instance.tile_size, parent_instance.tile_size), (0, 0, 0, 0))
+                    extent = _safe_extent_for_tile(x, y, z)
                     return img, extent, 'upper'
 
                 scale = 2 ** actual_supersample
@@ -753,10 +863,16 @@ class RasterTileServer(BaseTileServer):
                         fetch_y = y * scale + dy
                         try:
                             high_res_tile = parent_instance.fetch_tile(fetch_z, fetch_x, fetch_y)
-                            if high_res_tile.mode != 'RGBA':
-                                high_res_tile = high_res_tile.convert('RGBA')
+                            high_res_tile = parent_instance._normalize_tile_image(high_res_tile)
+                            if high_res_tile.size[0] <= 0 or high_res_tile.size[1] <= 0:
+                                high_res_tile = Image.new('RGBA', (parent_instance.tile_size, parent_instance.tile_size), (0, 0, 0, 0))
                             row.append(high_res_tile)
                         except Exception:
+                            warnings.warn(
+                                f"Supersample tile fetch failed for {provider} at z={fetch_z}, x={fetch_x}, y={fetch_y}; inserting a transparent fallback tile at the expected size.",
+                                UserWarning,
+                                stacklevel=2,
+                            )
                             blank = Image.new('RGBA', (parent_instance.tile_size, parent_instance.tile_size), (0, 0, 0, 0))
                             row.append(blank)
                     tiles.append(row)
@@ -767,15 +883,20 @@ class RasterTileServer(BaseTileServer):
                 else:
                     combined_img = Image.new('RGBA', (parent_instance.tile_size, parent_instance.tile_size), (0, 0, 0, 0))
 
+                if combined_img.size[0] <= 0 or combined_img.size[1] <= 0:
+                    warnings.warn(
+                        f"Supersample tile assembly for {provider} at z={z}, x={x}, y={y} produced a zero-sized image; replacing it with a transparent fallback tile.",
+                        UserWarning,
+                        stacklevel=2,
+                    )
+                    combined_img = Image.new('RGBA', (parent_instance.tile_size, parent_instance.tile_size), (0, 0, 0, 0))
+
                 # Downsample to target tile size
-                target_size = parent_instance.tile_size
+                target_size = max(1, parent_instance.tile_size)
                 combined_img = combined_img.resize((target_size, target_size), resample=resample_filter)
 
                 # Compute tile extent geometrically (no network fetch)
-                try:
-                    extent = self.tileextent(tile)
-                except Exception:
-                    extent = BaseTileServer._calculate_tile_extent_web_mercator(x, y, z)
+                extent = _safe_extent_for_tile(x, y, z)
 
                 return combined_img, extent, 'upper'
 
@@ -881,17 +1002,43 @@ class RasterTileServer(BaseTileServer):
 
         return license_info
 
+    def get_default_zoom(
+        self,
+        extent: List[float],
+        output_dpi: int = 150,
+        output_size: Optional[Tuple[int, int]] = None,
+        quality_preference: str = 'balanced'
+    ) -> int:
+        """Return the default auto-selected zoom for a given extent.
+
+        This is the convenience method to use when you want the server to choose a
+        sensible zoom level with minimal configuration. Only the extent is required;
+        the output size, DPI and quality preference fall back to reasonable defaults.
+        """
+        if output_size is None:
+            output_size = (1200, 1200)
+        return self.suggest_optimal_zoom(
+            extent,
+            output_dpi=output_dpi,
+            output_size=output_size,
+            quality_preference=quality_preference,
+        )
 
     def suggest_optimal_zoom(
         self,
         extent: List[float],
-        output_dpi: int,
-        output_size: Tuple[int, int],
+        output_dpi: int = 150,
+        output_size: Optional[Tuple[int, int]] = None,
         quality_preference: str = 'balanced'
     ) -> int:
         """
         Suggest optimal zoom level based on output requirements and quality preference.
+
+        If output_size is not provided, a default 1200x1200 output is assumed.
         """
+        if output_size is None:
+            output_size = (1200, 1200)
+
         # Calculate base zoom using existing method
         scale_denominator = self.calculate_scale_denominator(extent, output_size, output_dpi)
         pSrc = osr.SpatialReference()
@@ -1032,20 +1179,55 @@ class RasterTileServer(BaseTileServer):
         unavailable or fetch fails. Treat those as transparent placeholders to
         keep the output image dimensions valid and avoid NumPy broadcast errors.
         """
+        tile_size = max(1, int(tile_size))
         valid_rows = [row for row in tiles if row]
         if not valid_rows:
-            return Image.new('RGBA', (tile_size, tile_size))
+            warnings.warn(
+                "No valid tiles were available for the requested extent; combining tiles produced an empty grid. "
+                "Creating a transparent fallback image at the expected tile size to avoid a zero-dimension Cartopy image.",
+                UserWarning,
+                stacklevel=2,
+            )
+            return Image.new('RGBA', (tile_size, tile_size), (0, 0, 0, 0))
 
         max_cols = max(len(row) for row in valid_rows)
-        if max_cols == 0:
-            return Image.new('RGBA', (tile_size, tile_size))
+        if max_cols <= 0:
+            warnings.warn(
+                "Tile grid had no columns after filtering empty rows; creating a transparent fallback image at the expected tile size to avoid a zero-dimension Cartopy image.",
+                UserWarning,
+                stacklevel=2,
+            )
+            return Image.new('RGBA', (tile_size, tile_size), (0, 0, 0, 0))
 
-        combined_img = Image.new('RGBA', (max_cols * tile_size, len(valid_rows) * tile_size))
+        missing_rows = len(tiles) - len(valid_rows)
+        if missing_rows:
+            warnings.warn(
+                f"{missing_rows} empty tile rows were skipped while combining the tile grid; transparently filling the missing content instead of leaving a zero-sized image.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+        width = max(1, max_cols * tile_size)
+        height = max(1, len(valid_rows) * tile_size)
+        if width <= 0 or height <= 0:
+            warnings.warn(
+                "Tile grid width/height collapsed to zero while combining tiles; creating a transparent fallback image to avoid a zero-dimension Cartopy array.",
+                UserWarning,
+                stacklevel=2,
+            )
+            return Image.new('RGBA', (tile_size, tile_size), (0, 0, 0, 0))
+
+        combined_img = Image.new('RGBA', (width, height), (0, 0, 0, 0))
 
         for row_index, row in enumerate(valid_rows):
             for col_index in range(max_cols):
                 tile = row[col_index] if col_index < len(row) else None
                 if tile is None:
+                    warnings.warn(
+                        f"Missing tile at grid position ({row_index}, {col_index}) while combining tiles; inserting a transparent fallback tile of size {tile_size}x{tile_size}.",
+                        UserWarning,
+                        stacklevel=2,
+                    )
                     tile = Image.new('RGBA', (tile_size, tile_size), (0, 0, 0, 0))
                 combined_img.paste(tile, (col_index * tile_size, row_index * tile_size))
 
@@ -1114,133 +1296,5 @@ class RasterTileServer(BaseTileServer):
         }
         return filters.get(method.lower(), Image.LANCZOS)
 
-    @classmethod
-    def extent_to_tile_indices(
-        cls,
-        extent: List[float],
-        zoom: int
-    ) -> Tuple[int, int, int, int]:
-        """
-        Convert extent (minx, maxx, miny, maxy) to tile indices at a given zoom level.
 
-        Implemented as a classmethod so subclasses can override `lonlat_to_tile`.
-        """
-        minx, maxx, miny, maxy = extent
-        x_min, y_max = cls.lonlat_to_tile(minx, miny, zoom)
-        x_max, y_min = cls.lonlat_to_tile(maxx, maxy, zoom)
-        return x_min, y_min, x_max, y_max
-
-
-
-    def _validate_zoom_level(self, zoom_level: int, supersample: int = 0) -> Tuple[int, int]:
-        """Validate and adjust zoom + supersample against provider limits.
-
-        Returns (fetch_zoom, adjusted_supersample).
-        """
-        fetch_zoom = zoom_level + supersample
-        min_zoom = self._config.get('min_zoom', 0)
-        max_zoom = self._config.get('max_zoom', 18)
-
-        if zoom_level < min_zoom:
-            raise ValueError(f"{self.provider} does not support zoom level {zoom_level}. Minimum supported zoom is {min_zoom}.")
-        if zoom_level > max_zoom:
-            raise ValueError(f"{self.provider} does not support zoom level {zoom_level}. Maximum supported zoom is {max_zoom}.")
-
-        if fetch_zoom > max_zoom:
-            original_supersample = supersample
-            supersample = max(0, max_zoom - zoom_level)
-            warnings.warn(
-                f"{self.provider} maximum zoom level is {max_zoom}. Requested zoom {zoom_level} with supersample={original_supersample} would require zoom {fetch_zoom}. Automatically reducing supersample to {supersample}.",
-                UserWarning,
-            )
-            fetch_zoom = zoom_level + supersample
-
-        return fetch_zoom, supersample
-
-    @staticmethod
-    def calculate_zoom_level(
-        scale_denominator, pProjection, dpi=96, tile_width=256, tile_height=256
-    ):
-        """
-        Calculates the appropriate zoom level based on the scale denominator, CRS, and DPI.
-        """
-
-        pSpatial_reference_target = osr.SpatialReference()
-        pSpatial_reference_target.ImportFromWkt(pProjection)
-        meters_per_unit = pSpatial_reference_target.GetLinearUnits()
-
-        pixel_size_in_meters = 0.00028
-        pixel_span = (
-            scale_denominator * pixel_size_in_meters / meters_per_unit / (dpi / 96.0)
-        )
-
-        tile_span_x = tile_width * pixel_span
-        tile_span_y = tile_height * pixel_span
-
-        zoom_level = int(math.log2(40075016.68557849 / max(tile_span_x, tile_span_y)))
-
-        return zoom_level
-
-    @classmethod
-    def lonlat_to_tile(cls, lon: float, lat: float, zoom: int) -> Tuple[int, int]:
-        """
-        Convert longitude and latitude to tile indices at a given zoom level.
-        """
-        lat_rad = math.radians(lat)
-        n = 2.0 ** zoom
-        x_tile = int((lon + 180.0) / 360.0 * n)
-        y_tile = int(
-            (1.0 - math.log(math.tan(lat_rad) + (1 / math.cos(lat_rad))) / math.pi)
-            / 2.0
-            * n
-        )
-        return x_tile, y_tile
-
-
-    @staticmethod
-    def _calculate_tile_extent_web_mercator(x: int, y: int, z: int) -> Tuple[float, float, float, float]:
-        """
-        Calculate the Web Mercator extent for a tile at given coordinates.
-
-        This is a fallback utility for cartopy tile sources when extent cannot be obtained
-        from the parent class. Web Mercator (EPSG:3857) bounds are ±20037508.34 meters.
-
-        Args:
-            x: Tile X coordinate
-            y: Tile Y coordinate
-            z: Zoom level
-
-        Returns:
-            Tuple of (min_x, max_x, min_y, max_y) in Web Mercator meters
-        """
-        world_extent = 20037508.342789244  # Web Mercator world extent
-        tile_width = (2 * world_extent) / (2 ** z)
-
-        min_x = -world_extent + (x * tile_width)
-        max_x = min_x + tile_width
-        max_y = world_extent - (y * tile_width)
-        min_y = max_y - tile_width
-
-        return (min_x, max_x, min_y, max_y)
-
-    @staticmethod
-    def _get_resample_filter(method: str):
-        """Get PIL resampling filter from method name.
-
-        Args:
-            method: Resampling method name - 'lanczos', 'bicubic', 'bilinear', 'nearest'
-
-        Returns:
-            PIL resampling filter constant
-        """
-        if Image is None:
-            raise ImportError("PIL/Pillow is required for resampling operations")
-
-        filters = {
-            'lanczos': Image.LANCZOS,
-            'bicubic': Image.BICUBIC,
-            'bilinear': Image.BILINEAR,
-            'nearest': Image.NEAREST
-        }
-        return filters.get(method.lower(), Image.LANCZOS)
 

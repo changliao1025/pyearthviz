@@ -48,7 +48,7 @@ class BaseTileServer:
             if api_key:
                 self.api_key = api_key
             else:
-                env_key = self._config.get('api_env') or ("STADIA_API_KEY" if "Stadia" in provider else None)
+                env_key = self._resolve_api_env_key(provider)
                 if env_key:
                     self.api_key = os.environ.get(env_key)
                     if not self.api_key:
@@ -56,10 +56,15 @@ class BaseTileServer:
                             f"Provider '{provider}' requires an API key. Provide it via api_key parameter or {env_key} environment variable.",
                             UserWarning,
                         )
+                        self.api_key = None
                 else:
                     self.api_key = None
         else:
             self.api_key = api_key
+
+    def _resolve_api_env_key(self, provider: str) -> Optional[str]:
+        """Return the environment variable name configured for this provider."""
+        return self._config.get('api_env')
 
     # Instance methods
 
@@ -79,9 +84,6 @@ class BaseTileServer:
         """
         template = self.get_url_template()
         return template.format(z=z, x=x, y=y, api_key=self.api_key or '')
-
-
-
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(provider='{self.provider}', tile_size={self.tile_size})"
@@ -127,5 +129,16 @@ class BaseTileServer:
             / np.max([image_width_in_inches, image_height_in_inches])
         )
         return scale_denominator
+
+    @staticmethod
+    def _calculate_tile_extent_web_mercator(x: int, y: int, z: int) -> Tuple[float, float, float, float]:
+        """Calculate the Web Mercator extent for a tile at a given z/x/y."""
+        world_extent = 20037508.342789244
+        tile_width = (2 * world_extent) / (2 ** z)
+        min_x = -world_extent + (x * tile_width)
+        max_x = min_x + tile_width
+        max_y = world_extent - (y * tile_width)
+        min_y = max_y - tile_width
+        return (min_x, max_x, min_y, max_y)
 
 
