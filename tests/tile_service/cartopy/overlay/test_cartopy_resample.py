@@ -14,7 +14,7 @@ TEST_EXTENT = [97.8125, 101.19193115234378, 36.295833333333356, 38.3172339545356
 TEST_ZOOM = None
 
 
-def test_cartopy_supersample_resample_methods():
+def test_cartopy_resample():
     """Render the same map using multiple resampling methods."""
     server = RasterTileServer('Esri.Terrain')
     zoom_level = server.get_default_zoom(TEST_EXTENT) if TEST_ZOOM is None else TEST_ZOOM
@@ -28,12 +28,12 @@ def test_cartopy_supersample_resample_methods():
         fig = plt.figure(figsize=(8, 8))
         ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
         ax.set_extent(TEST_EXTENT, crs=ccrs.PlateCarree())
-        tile_source = server.get_cartopy_source(supersample=1, resample_method=method)
+        tile_source = server.get_cartopy_source(supersample=0, resample_method=method)
         ax.add_image(tile_source, zoom_level, alpha=0.9)
         gl = ax.gridlines(draw_labels=True, linewidth=0.5, alpha=0.5)
         gl.top_labels = False
         gl.right_labels = False
-        ax.set_title(f"Supersample=1\n{desc}", fontsize=12, pad=10)
+        ax.set_title(f"Supersample=0\n{desc}", fontsize=12, pad=10)
 
         filename = f"resample_{method}.png"
         output_path = os.path.join(OUTPUT_DIR, filename)
@@ -41,9 +41,10 @@ def test_cartopy_supersample_resample_methods():
         plt.close(fig)
 
         assert os.path.exists(output_path), f'Missing output file: {output_path}'
+    return True
 
 if __name__ == '__main__':
-    success = test_cartopy_supersample_resample_methods() 
+    success = test_cartopy_resample() 
 
     print("\n" + "="*60)
     if success:

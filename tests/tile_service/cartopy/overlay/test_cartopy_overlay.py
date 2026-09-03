@@ -14,7 +14,7 @@ TEST_EXTENT = [97.8125, 101.19193115234378, 36.295833333333356, 38.3172339545356
 TEST_ZOOM = None
 
 
-def test_cartopy_supersample_overlay():
+def test_cartopy_overlay():
     """Render terrain and hydro overlays for each supersample setting."""
     terrain_server = RasterTileServer('Esri.Terrain')
     hydro_server = RasterTileServer('Esri.Hydro')
@@ -55,8 +55,10 @@ def test_cartopy_supersample_overlay():
 
         assert os.path.exists(output_path), f'Missing output file: {output_path}'
 
+    return True
+
 if __name__ == '__main__':
-    success = test_cartopy_supersample_overlay() 
+    success = test_cartopy_overlay() 
 
     print("\n" + "="*60)
     if success:

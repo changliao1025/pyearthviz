@@ -2,9 +2,8 @@
 
 import os
 
-import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
-
+import cartopy.crs as ccrs
 from pyearthviz.map import RasterTileServer
 
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), 'test_outputs')
@@ -14,7 +13,7 @@ TEST_EXTENT = [97.8125, 101.19193115234378, 36.295833333333356, 38.3172339545356
 TEST_ZOOM = None
 
 
-def test_cartopy_supersample_single_provider(provider_name='Esri.Terrain', api_key=None):
+def test_cartopy_supersample(provider_name='Esri.Terrain', api_key=None):
     """Render the same provider at multiple supersample levels."""
     server = RasterTileServer(provider_name, api_key=api_key)
     zoom_level = server.get_default_zoom(TEST_EXTENT) if TEST_ZOOM is None else TEST_ZOOM
@@ -39,6 +38,7 @@ def test_cartopy_supersample_single_provider(provider_name='Esri.Terrain', api_k
         safe_provider = provider_name.replace('.', '_').lower()
         filename = f"{safe_provider}_{config['name']}.png"
         output_path = os.path.join(OUTPUT_DIR, filename)
+        fig.canvas.draw()  # Ensure the figure is rendered before saving
         plt.savefig(output_path, dpi=150, bbox_inches='tight')
         plt.close(fig)
 
@@ -46,7 +46,7 @@ def test_cartopy_supersample_single_provider(provider_name='Esri.Terrain', api_k
     return True
 
 if __name__ == '__main__':
-    success = test_cartopy_supersample_single_provider() 
+    success = test_cartopy_supersample() 
 
     print("\n" + "="*60)
     if success:

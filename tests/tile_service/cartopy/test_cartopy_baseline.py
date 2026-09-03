@@ -2,8 +2,8 @@
 
 import os
 
-import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
+import cartopy.crs as ccrs  # noqa: E402  module-level imports
 
 from pyearthviz.map import RasterTileServer
 
@@ -33,6 +33,7 @@ def test_cartopy_baseline(provider_name='Esri.Terrain', api_key=None):
 
     safe_provider = provider_name.replace('.', '_').lower()
     output_path = os.path.join(OUTPUT_DIR, f"{safe_provider}_baseline.png")
+    fig.canvas.draw()  # Ensure the figure is rendered before saving
     plt.savefig(output_path, dpi=150, bbox_inches='tight')
     plt.close(fig)
 

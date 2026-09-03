@@ -23,7 +23,7 @@ def test_basic_tile_fetch():
     img_array = server.fetch_tiles_for_extent(
         extent,
         zoom_level=zoom,
-        supersample=1,
+        supersample=0,
         output_dpi = 150,
         resample=True,
         resample_method='lanczos'

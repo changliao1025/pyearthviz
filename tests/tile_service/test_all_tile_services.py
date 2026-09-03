@@ -172,7 +172,7 @@ def create_comparison_grid():
         return False
 
 if __name__ == '__main__':
-    #success = test_all_providers()
+    success = test_all_providers()
 
     # Try to create comparison grids
     success = create_comparison_grid()
