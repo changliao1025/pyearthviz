@@ -28,13 +28,14 @@ Example:
 """
 import os
 from io import BytesIO
-from typing import List, Tuple, Optional, Dict, Any
+from typing import List, Tuple, Optional, Dict, Any, NamedTuple
 from datetime import datetime
 import warnings
 import math
 import numpy as np
 from osgeo import osr
 import cartopy.io.img_tiles as cimgt
+import cartopy.crs as ccrs
 
 try:
     import requests
@@ -48,6 +49,30 @@ from .base_tile_server import BaseTileServer
 def mercator_y_to_lat(y_metre: float) -> float:
     """Convert Web‑Mercator Y (meters) to latitude in degrees."""
     return math.degrees(2 * math.atan(math.exp(y_metre / 6378137.0)) - math.pi / 2)
+
+
+class ManualBasemap(NamedTuple):
+    """Everything needed to render a manually stitched basemap with ``imshow``.
+
+    Return type of :meth:`RasterTileServer.fetch_manual_basemap` and
+    :meth:`RasterTileServer.add_basemap`. It intentionally avoids cartopy's
+    ``add_image`` / ``image_for_domain`` merge path (which can shift tiles for some
+    providers) by carrying a pre-computed Web Mercator extent that always matches
+    the stitched image.
+
+    Attributes:
+        image: RGBA numpy array of the stitched tiles (north-at-top).
+        extent: ``[left, right, bottom, top]`` in Web Mercator (EPSG:3857).
+        crs: cartopy CRS to pass as ``transform`` to ``imshow``.
+        origin: imshow origin matching the stitched image (``'upper'``).
+        attribution: license/attribution string for the provider.
+    """
+    image: np.ndarray
+    extent: List[float]
+    crs: Any
+    origin: str
+    attribution: str
+
 
 class RasterTileServer(BaseTileServer):
     """
@@ -79,6 +104,12 @@ class RasterTileServer(BaseTileServer):
     # Registered API keys/tokens, keyed by provider name. Used as a fallback
     # when a provider is instantiated without an explicit api_key.
     _REGISTERED_API_KEYS: Dict[str, str] = {}
+
+    # Backward-compatible provider name aliases resolved in __init__
+    # (e.g., the legacy bare 'OSM' maps to the registered 'OSM.Standard').
+    _PROVIDER_ALIASES: Dict[str, str] = {
+        'OSM': 'OSM.Standard',
+    }
 
     @classmethod
     def register_api_key(cls, provider: str, api_key: str) -> None:
@@ -499,6 +530,9 @@ class RasterTileServer(BaseTileServer):
                 "Install them with: pip install requests Pillow"
             )
 
+        # Resolve backward-compatible provider aliases (e.g., 'OSM' -> 'OSM.Standard').
+        provider = self._PROVIDER_ALIASES.get(provider, provider)
+
         requires_api_key = self._PROVIDERS.get(provider, {}).get('requires_api_key', False)
 
         if requires_api_key:
@@ -781,6 +815,129 @@ class RasterTileServer(BaseTileServer):
         # Convert to NumPy array
         img_array = np.array(combined_img)
         return img_array
+
+    def fetch_manual_basemap(
+        self,
+        extent: List[float],
+        zoom_level: Optional[int] = None,
+        supersample: int = 0,
+        resample: bool = True,
+        resample_method: str = 'lanczos',
+        output_size: Optional[Tuple[int, int]] = None,
+        output_dpi: int = 96,
+        quality_preference: str = 'balanced',
+    ) -> 'ManualBasemap':
+        """Fetch + stitch tiles manually and return everything needed for imshow.
+
+        Fully manual alternative to cartopy's ``add_image`` / ``image_for_domain``.
+        Tiles are fetched once and stitched north-at-top, and the Web Mercator extent
+        is derived directly from the tile grid so it always lines up with the returned
+        image (no tile-shifting artifacts).
+
+        Args:
+            extent: ``[minx, maxx, miny, maxy]`` in longitude/latitude (degrees).
+            zoom_level: Tile zoom level; auto-selected via ``suggest_optimal_zoom``
+                when omitted.
+            supersample: Super-sampling level (0=off) forwarded to
+                ``fetch_tiles_for_extent``.
+            resample: Apply a smoothing filter (forwarded to ``fetch_tiles_for_extent``).
+            resample_method: Resampling filter name ('lanczos', 'bicubic', ...).
+            output_size: Output size used when auto-selecting a zoom level.
+            output_dpi: DPI used when auto-selecting a zoom level.
+            quality_preference: 'fast', 'balanced', or 'quality' for auto-zoom.
+
+        Returns:
+            ManualBasemap: ``(image, extent, crs, origin, attribution)``.
+
+        Example:
+            >>> server = RasterTileServer('Esri.Terrain')
+            >>> basemap = server.fetch_manual_basemap([minx, maxx, miny, maxy], zoom_level=10)
+            >>> ax.imshow(basemap.image, extent=basemap.extent,
+            ...           origin=basemap.origin, transform=basemap.crs)
+        """
+        if zoom_level is None:
+            zoom_level = self.suggest_optimal_zoom(
+                extent,
+                output_dpi=output_dpi,
+                output_size=output_size,
+                quality_preference=quality_preference,
+            )
+
+        # Stitch the tiles manually (single fetch, north-at-top image).
+        image = self.fetch_tiles_for_extent(
+            extent,
+            zoom_level,
+            supersample=supersample,
+            resample=resample,
+            resample_method=resample_method,
+        )
+
+        # Derive the Web Mercator extent from the base-zoom tile grid so it matches
+        # the stitched image exactly (supersample only changes resolution, not extent).
+        x_min, y_min, x_max, y_max = self.extent_to_tile_indices(extent, zoom_level)
+        left, _, _, top = self._calculate_tile_extent_web_mercator(x_min, y_min, zoom_level)
+        _, right, bottom, _ = self._calculate_tile_extent_web_mercator(x_max, y_max, zoom_level)
+        mercator_extent = [left, right, bottom, top]
+
+        return ManualBasemap(
+            image=image,
+            extent=mercator_extent,
+            crs=ccrs.Mercator(),
+            origin='upper',
+            attribution=self.get_license_info(),
+        )
+
+    def add_basemap(
+        self,
+        ax,
+        extent: List[float],
+        zoom_level: Optional[int] = None,
+        alpha: float = 1.0,
+        supersample: int = 0,
+        zorder: Optional[int] = None,
+        **fetch_kwargs,
+    ) -> 'ManualBasemap':
+        """Render this provider's tiles on a cartopy axes using manual imshow.
+
+        Friendly wrapper around :meth:`fetch_manual_basemap` that performs the
+        ``ax.imshow(...)`` call with the correct extent/transform/origin, avoiding
+        cartopy's ``add_image`` (which can introduce tile-shifting artifacts). The
+        resulting :class:`ManualBasemap` is returned so callers can read
+        ``.attribution`` for license text.
+
+        Args:
+            ax: A cartopy GeoAxes to draw on.
+            extent: ``[minx, maxx, miny, maxy]`` in longitude/latitude (degrees).
+            zoom_level: Tile zoom level; auto-selected when omitted.
+            alpha: Opacity for the basemap layer.
+            supersample: Super-sampling level for higher quality.
+            zorder: Optional matplotlib zorder for the image.
+            **fetch_kwargs: Extra keyword arguments forwarded to
+                ``fetch_manual_basemap`` (e.g., ``resample_method``).
+
+        Returns:
+            ManualBasemap: ``(image, extent, crs, origin, attribution)``.
+
+        Example:
+            >>> server = RasterTileServer('Esri.Terrain')
+            >>> basemap = server.add_basemap(ax, [minx, maxx, miny, maxy], 10, alpha=0.9)
+            >>> print(basemap.attribution)
+        """
+        result = self.fetch_manual_basemap(
+            extent, zoom_level, supersample=supersample, **fetch_kwargs
+        )
+        imshow_kwargs = {}
+        if zorder is not None:
+            imshow_kwargs['zorder'] = zorder
+        ax.imshow(
+            result.image,
+            extent=result.extent,
+            origin=result.origin,
+            transform=result.crs,
+            alpha=alpha,
+            **imshow_kwargs,
+        )
+        return result
 
     def get_cartopy_source(self, supersample: int = 0, 
                            resample_method: str = 'lanczos'
