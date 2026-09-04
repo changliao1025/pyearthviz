@@ -246,7 +246,7 @@ def map_multiple_vector_files(
     plt.rcParams["font.serif"] = sFont
     plt.rcParams["mathtext.fontset"] = "dejavuserif"
 
-    
+
     fig = plt.figure(dpi=iDPI)
     fig.set_figwidth(iSize_x)
     fig.set_figheight(iSize_y)
@@ -365,24 +365,15 @@ def map_multiple_vector_files(
                 nTile_provider = 5
             dAlpha = 1.0
             aLicense_info_list = []  # Collect all license info
-            #for sBasemap_provider in aBasemap_provider_in:
-            for i in range(nTile_provider):
+            for i in range(nTile_provider):              
                 sBasemap_provider = aBasemap_provider_in[i]
-
-                # Check if this is a Cartopy built-in provider (e.g., 'OSM')
-                if sBasemap_provider == 'OSM':
-                    # Use Cartopy's built-in OSM directly
-                    from cartopy.io.img_tiles import OSM
-                    pTiles = OSM()
-                    ax.add_image(pTiles, iBasemap_zoom_level, alpha=dAlpha - i * 0.1)
-                    # Collect OSM attribution
-                    aLicense_info_list.append("© OpenStreetMap contributors")
-                else:
-                    # Use RasterTileServer for custom providers
-                    pTile_service = RasterTileServer(sBasemap_provider)
-                    pTiles = pTile_service.get_cartopy_source()
-                    ax.add_image(pTiles, iBasemap_zoom_level, alpha=dAlpha - i * 0.1)
-                    aLicense_info_list.append(pTile_service.get_license_info())
+                # Use RasterTileServer for custom providers
+                pTile_service = RasterTileServer(sBasemap_provider)
+                # Manual fetch + stitch + imshow through the unified interface;
+                # this avoids cartopy's add_image, which can shift tiles.
+                pBasemap = pTile_service.add_basemap(
+                    ax, aExtent, iBasemap_zoom_level, alpha=dAlpha - i * 0.1       )
+                aLicense_info_list.append(pBasemap.attribution)
 
             # Combine all license info and display once
             if aLicense_info_list:
