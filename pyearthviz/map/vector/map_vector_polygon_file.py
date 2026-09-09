@@ -440,8 +440,8 @@ def map_vector_polygon_file(
             aLicense_info_list = []  # Collect all license info
             #for sBasemap_provider in aBasemap_provider_in:
             for i in range(nTile_provider):
-                sBasemap_provider = aBasemap_provider_in[i]         
-                # Use RasterTileServer for custom providers              
+                sBasemap_provider = aBasemap_provider_in[i]
+                # Use RasterTileServer for custom providers
                 pTile_service = RasterTileServer(sBasemap_provider)
                 # Manual fetch + stitch + imshow through the unified interface;
                 # this avoids cartopy's add_image, which can shift tiles.
@@ -457,11 +457,11 @@ def map_vector_polygon_file(
                     textwrap.wrap(sLicense_info, width=cwidth)
                 )
                 ax.text(0.5,
-                    0.05,
+                    0.03,
                     sLicense_info_wrapped,
                     transform=ax.transAxes,
                     ha="center",
-                    va="center",
+                    va="bottom",
                     fontsize=6,
                     color="gray",
                     bbox=dict(

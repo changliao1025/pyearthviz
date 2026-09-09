@@ -365,7 +365,7 @@ def map_multiple_vector_files(
                 nTile_provider = 5
             dAlpha = 1.0
             aLicense_info_list = []  # Collect all license info
-            for i in range(nTile_provider):              
+            for i in range(nTile_provider):
                 sBasemap_provider = aBasemap_provider_in[i]
                 # Use RasterTileServer for custom providers
                 pTile_service = RasterTileServer(sBasemap_provider)
@@ -384,11 +384,11 @@ def map_multiple_vector_files(
                     textwrap.wrap(sLicense_info, width=cwidth)
                 )
                 ax.text(0.5,
-                    0.05,
+                    0.03,
                     sLicense_info_wrapped,
                     transform=ax.transAxes,
                     ha="center",
-                    va="center",
+                    va="bottom",
                     fontsize=6,
                     color="gray",
                     bbox=dict(
