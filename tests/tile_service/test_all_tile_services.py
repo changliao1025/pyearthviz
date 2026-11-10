@@ -22,7 +22,7 @@ TEST_EXTENT = [97.8125, 101.19193115234378, 36.295833333333356, 38.3172339545356
 TEST_ZOOM = None
 
 
-def test_provider_baseline(provider_name, api_key=None):
+def run_provider_baseline(provider_name, api_key=None):
     """Fetch a single provider using the baseline configuration only."""
     print(f"\n{'='*60}")
     print(f"Testing baseline for: {provider_name}")
@@ -70,7 +70,7 @@ def test_all_providers():
 
     results = []
     for provider_name in providers:
-        result = test_provider_baseline(provider_name, None)
+        result = run_provider_baseline(provider_name, None)
         results.append((provider_name, result))
 
     print("\n" + "=" * 60)

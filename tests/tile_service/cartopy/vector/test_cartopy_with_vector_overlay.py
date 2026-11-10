@@ -93,14 +93,15 @@ def add_vector_overlay(
     pDataset = pLayer = pFeature = None
 
 
-def test_cartopy_overlay(provider=None):
+def test_cartopy_overlay(provider="Esri.Terrain"):
     import cartopy.crs as ccrs
+
+    if provider is None:
+        provider = "Esri.Terrain"
 
     TEST_ZOOM = None
     """Render terrain and hydro overlays for each supersample setting."""
-    terrain_server = (
-        RasterTileServer(provider) if provider else RasterTileServer("Esri.Terrain")
-    )
+    terrain_server = RasterTileServer(provider)
     if not getattr(terrain_server, "is_accessible", True):
         print(
             f"  - Skipping provider '{provider}': unavailable or requires an API key."
