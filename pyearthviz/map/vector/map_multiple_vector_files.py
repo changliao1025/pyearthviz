@@ -389,7 +389,7 @@ def map_multiple_vector_files(
                     transform=ax.transAxes,
                     ha="center",
                     va="bottom",
-                    fontsize=6,
+                    fontsize=5,
                     color="gray",
                     bbox=dict(
                         facecolor="white", edgecolor="black", boxstyle="round,pad=0.3"
