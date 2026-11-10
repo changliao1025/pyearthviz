@@ -1,6 +1,7 @@
-import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
+
 from pyearthviz.color.create_diverge_rgb_color_hex import (
     create_diverge_rgb_color_hex,
 )
@@ -178,7 +179,7 @@ def boxplot_data_with_reference(
         sFont = "Times New Roman"
 
     plt.rcParams["font.family"] = sFont
-    plt.rcParams["mathtext.fontset"] = "cm"  #'dejavuserif'
+    plt.rcParams["mathtext.fontset"] = "cm"  # 'dejavuserif'
 
     fig = plt.figure(dpi=iDPI)
     fig.set_figwidth(iSize_x)
@@ -325,7 +326,7 @@ def boxplot_data_with_reference(
         # convert label to scientific notation
         aLabel_x_new = list()
         for i in range(len(aLabel_x_in)):
-            aLabel_x_new.append("{:0.1E}".format(aLabel_x_in[i]))
+            aLabel_x_new.append(f"{aLabel_x_in[i]:0.1E}")
         ax.set_xticklabels(aLabel_x_new)
     else:
         ax.set_xticklabels(aLabel_x_in)

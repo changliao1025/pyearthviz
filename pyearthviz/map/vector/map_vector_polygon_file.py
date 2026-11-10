@@ -1,34 +1,37 @@
-import os
 import datetime
+import os
 import textwrap
-import numpy as np
-from osgeo import osr, gdal, ogr
 from urllib.error import URLError
+
+import cartopy.crs as ccrs
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap
-from matplotlib.collections import PatchCollection
-from matplotlib.patches import Polygon as mpolygon
-import cartopy.crs as ccrs
-from cartopy.io.img_tiles import OSM
-from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
-from pyproj import Geod
+import numpy as np
 import shapely.geometry as sgeom
+from cartopy.io.img_tiles import OSM
+from cartopy.mpl.gridliner import LATITUDE_FORMATTER, LONGITUDE_FORMATTER
+from matplotlib.collections import PatchCollection
+from matplotlib.colors import ListedColormap
+from matplotlib.patches import Polygon as mpolygon
+from osgeo import gdal, ogr, osr
 from pyearth.gis.gdal.gdal_vector_format_support import get_vector_driver_from_filename
-from pyearthviz.map.zebra_frame import zebra_frame
-from pyearth.gis.location.get_geometry_coordinates import get_geometry_coordinates
-from pyearth.gis.geometry.calculate_polygon_area import calculate_polygon_area
 from pyearth.gis.geometry.calculate_distance_based_on_longitude_latitude import (
     calculate_distance_based_on_longitude_latitude,
 )
+from pyearth.gis.geometry.calculate_polygon_area import calculate_polygon_area
+from pyearth.gis.location.get_geometry_coordinates import get_geometry_coordinates
+from pyproj import Geod
+
 from pyearthviz.formatter import OOMFormatter
 from pyearthviz.map import RasterTileServer
+from pyearthviz.map.zebra_frame import zebra_frame
 
 osr.UseExceptions()
 
 # get the current year for openstreetmap copy right label
 iYear_current = datetime.datetime.now().year
 sYear = str(iYear_current)
+
 
 def simplify_coordinates(aCoords_gcs, min_distance=1.0):
     """
@@ -106,7 +109,7 @@ def map_vector_polygon_file(
     plot vector data on a map
     currently only support geojson and shapefile
     by default, the program will plot all the polygons in the file
-    in the furture, the program will support to plot only a subset of polygons
+    in the future, the program will support to plot only a subset of polygons
 
     Args:
         iFiletype_in (_type_): _description_
@@ -422,7 +425,9 @@ def map_vector_polygon_file(
             iBasemap_zoom_level = iBasemap_zoom_level_in
         else:
             image_size = [1000, 1000]
-            scale_denominator = RasterTileServer.calculate_scale_denominator(aExtent, image_size)
+            scale_denominator = RasterTileServer.calculate_scale_denominator(
+                aExtent, image_size
+            )
             pSrc = osr.SpatialReference()
             pSrc.ImportFromEPSG(3857)  # mercator
             pProjection = pSrc.ExportToWkt()
@@ -438,7 +443,7 @@ def map_vector_polygon_file(
                 nTile_provider = 5
             dAlpha = 1.0
             aLicense_info_list = []  # Collect all license info
-            #for sBasemap_provider in aBasemap_provider_in:
+            # for sBasemap_provider in aBasemap_provider_in:
             for i in range(nTile_provider):
                 sBasemap_provider = aBasemap_provider_in[i]
                 # Use RasterTileServer for custom providers
@@ -456,7 +461,8 @@ def map_vector_polygon_file(
                 sLicense_info_wrapped = "\n".join(
                     textwrap.wrap(sLicense_info, width=cwidth)
                 )
-                ax.text(0.5,
+                ax.text(
+                    0.5,
                     0.03,
                     sLicense_info_wrapped,
                     transform=ax.transAxes,
@@ -620,7 +626,7 @@ def map_vector_polygon_file(
         aColor_index = aColor_index.flatten()
         aColor = pCmap(aColor_index)
         if iFlag_color == 1:
-            if iFlag_fill == True:
+            if iFlag_fill:
                 aPatch = [mpolygon(poly, closed=True) for poly in aPolygon]
                 pPC = PatchCollection(
                     aPatch,
@@ -644,7 +650,7 @@ def map_vector_polygon_file(
                 sColor = sColor_in
             else:
                 sColor = "blue"
-            if iFlag_fill == True:
+            if iFlag_fill:
                 aPatch = [
                     mpolygon(poly, closed=True, fill=iFlag_fill) for poly in aPolygon
                 ]

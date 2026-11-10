@@ -21,9 +21,7 @@ def RGB_to_hex(RGB):
     """[255,255,255] -> "#FFFFFF" """
     # Components need to be integers for hex to make sense
     RGB = [int(x) for x in RGB]
-    return "#" + "".join(
-        ["0{0:x}".format(v) if v < 16 else "{0:x}".format(v) for v in RGB]
-    )
+    return "#" + "".join([f"0{v:x}" if v < 16 else f"{v:x}" for v in RGB])
 
 
 def color_dict(gradient):
@@ -42,13 +40,13 @@ def linear_gradient(start_hex, finish_hex="#FFFFFF", n=10):
     """returns a gradient list of (n) colors between
     two hex colors. start_hex and finish_hex
     should be the full six-digit color string,
-    inlcuding the number sign ("#FFFFFF")"""
+    including the number sign ("#FFFFFF")"""
     # Starting and ending colors in RGB form
     s = hex_to_RGB(start_hex)
     f = hex_to_RGB(finish_hex)
-    # Initilize a list of the output colors with the starting color
+    # Initialize a list of the output colors with the starting color
     RGB_list = [s]
-    # Calcuate a color at each evenly spaced value of t from 1 to n
+    # Calculate a color at each evenly spaced value of t from 1 to n
     for t in range(1, n):
         # Interpolate RGB vector for color at the current value of t
         curr_vector = [

@@ -1,5 +1,5 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from mpl_toolkits.axes_grid1 import AxesGrid
 
 
@@ -137,7 +137,7 @@ def ridgeplot_data_density(
         dMin_y = np.min(yy)
         dMax_y = np.max(yy)
 
-        dRatio = (float((iSize_y / nData)) / iSize_x) / (
+        dRatio = (float(iSize_y / nData) / iSize_x) / (
             (dMax_y - dMin_y) / (dMax_x - dMin_x)
         )
         ax.set_aspect(dRatio, "box")

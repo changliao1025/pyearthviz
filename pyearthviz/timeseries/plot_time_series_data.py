@@ -1,18 +1,18 @@
 from datetime import datetime
-import matplotlib.dates as mdates
-import numpy as np
+
 import matplotlib as mpl
-import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import matplotlib.patches as patches
+import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.patches import FancyArrowPatch
-
-
 from pyearth.toolbox.data.list.list_alg import list_max, list_min
+
+from pyearthviz.color.choose_n_color import polylinear_gradient, rand_hex_color
 from pyearthviz.color.create_diverge_rgb_color_hex import (
     create_diverge_rgb_color_hex,
 )
-from pyearthviz.color.choose_n_color import polylinear_gradient, rand_hex_color
-from pyearthviz.formatter import log_formatter, MathTextSciFormatter
+from pyearthviz.formatter import MathTextSciFormatter, log_formatter
 
 
 def plot_time_series_data(
@@ -45,6 +45,7 @@ def plot_time_series_data(
     sFont_in=None,
     sLocation_legend_in=None,
     sTitle_in=None,
+    dMissing_value_in=None,
 ):
     """
     Plot time series data
@@ -326,7 +327,7 @@ def plot_time_series_data(
     if sLocation_legend_in is not None:
         sLocation_legend = sLocation_legend_in
     else:
-        sLocation_legend = "best"  # remove the setting so it becomes automatical
+        sLocation_legend = "best"  # remove the setting so it becomes automatic
 
     if aLocation_legend_in is not None:
         aLocation_legend = aLocation_legend_in
@@ -341,6 +342,11 @@ def plot_time_series_data(
     sYear_format = mpl.dates.DateFormatter("%Y")
     sMonth_format = mpl.dates.DateFormatter("%Y-%m")
     # start loop for each data
+
+    if dMissing_value_in is not None:
+        missing_value = dMissing_value_in
+    else:
+        missing_value = -9999
 
     for iax in range(len(ax_all)):
         ax = ax_all[iax]
@@ -387,7 +393,7 @@ def plot_time_series_data(
             else:
                 pass
 
-        # unqiue setting
+        # unique setting
         if iax == 0:
             ax.axis("on")
             ax.grid(which="major", color="grey", linestyle="--", axis="y")
@@ -423,7 +429,7 @@ def plot_time_series_data(
                     nlabel = int((dMax_y - dMin_y) / dSpace_y) + 1
                     for i in np.arange(0, nlabel, 1):
                         ii = int(dMin_y) + i * dSpace_y
-                        sTicklabel = r"$10^{{{}}}$".format(int(ii))
+                        sTicklabel = rf"$10^{{{int(ii)}}}$"
                         aLabel_y.append(sTicklabel)
                         pass
                     ticks = np.arange(0, nlabel, 1) * dSpace_y + int(dMin_y)
@@ -434,7 +440,7 @@ def plot_time_series_data(
                     for i in np.arange(0, nlabel, 1):
                         ii = int(dMin_y) + i * dSpace_y
                         iii = sFormat_y.format(ii)
-                        sTicklabel = r"$10^{{{}}}$".format(iii)
+                        sTicklabel = rf"$10^{{{iii}}}$"
                         aLabel_y.append(sTicklabel)
                         pass
                     ticks = np.arange(0, nlabel, 1) * dSpace_y + dMin_y
@@ -532,7 +538,7 @@ def plot_time_series_data(
                     nlabel = int((dMax_y - dMin_y) / dSpace_y_mini) + 1
                     for i in np.arange(0, nlabel, 1):
                         ii = int(dMin_y) + i * dSpace_y_mini
-                        sTicklabel = r"$10^{{{}}}$".format(int(ii))
+                        sTicklabel = rf"$10^{{{int(ii)}}}$"
                         aLabel_y.append(sTicklabel)
                         pass
                     ticks = np.arange(0, nlabel, 1) * dSpace_y_mini + int(dMin_y)
@@ -543,7 +549,7 @@ def plot_time_series_data(
                     for i in np.arange(0, nlabel, 1):
                         ii = int(dMin_y) + i * dSpace_y_mini
                         iii = sFormat_y.format(ii)
-                        sTicklabel = r"$10^{{{}}}$".format(iii)
+                        sTicklabel = rf"$10^{{{iii}}}$"
                         aLabel_y.append(sTicklabel)
                         pass
                     ticks = np.arange(0, nlabel, 1) * dSpace_y_mini + dMin_y
@@ -633,7 +639,7 @@ def plot_time_series_data(
         plt.savefig(sFilename_out, bbox_inches="tight")
         plt.close("all")
         plt.clf()
-        print("The figure is saved to {0}".format(sFilename_out))
+        print(f"The figure is saved to {sFilename_out}")
         return
     else:
         plt.show()

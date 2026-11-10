@@ -179,4 +179,3 @@ Copyright © 2022, Battelle Memorial Institute
 If you make use of `PyEarthViz` in your work, please consider including a reference to the following:
 
 * Chang Liao. (2026). PyEarthViz: A lightweight Python package for 2D visualization of Earth science data. (Software). Zenodo. https://doi.org/10.5281/zenodo.18797442
-

@@ -1,14 +1,14 @@
 from datetime import datetime
-import numpy as np
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-
+import numpy as np
+from pyearth.toolbox.data.list.list_alg import list_max, list_min
 
 from pyearthviz.color.create_diverge_rgb_color_hex import (
     create_diverge_rgb_color_hex,
 )
 
-from pyearth.toolbox.data.list.list_alg import list_max, list_min
 
 def ladder_plot_xy_data(
     aX_all,
@@ -42,6 +42,7 @@ def ladder_plot_xy_data(
     sFormat_y_in=None,
     sFont_in=None,
     sTitle_in=None,
+    dMissing_value_in=None,
 ):
     """
     Plot a X-Y data
@@ -237,6 +238,11 @@ def ladder_plot_xy_data(
         sFormat_y = sFormat_y_in
     else:
         iFlag_format_y = 0
+
+    if dMissing_value_in is not None:
+        missing_value = dMissing_value_in
+    else:
+        missing_value = -9999
 
     # start loop for each data
     for i in np.arange(1, nData + 1):

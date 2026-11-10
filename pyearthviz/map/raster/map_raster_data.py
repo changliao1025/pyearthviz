@@ -1,13 +1,11 @@
-import numpy as np
-
+import cartopy as cpl
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import cartopy as cpl
-
-from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
+import numpy as np
+from cartopy.mpl.gridliner import LATITUDE_FORMATTER, LONGITUDE_FORMATTER
 from pyearth.toolbox.data.cgpercentiles import cgpercentiles
-from pyearthviz.formatter import log_formatter
-from pyearthviz.formatter import OOMFormatter
+
+from pyearthviz.formatter import OOMFormatter, log_formatter
 
 pProjection = cpl.crs.PlateCarree()
 

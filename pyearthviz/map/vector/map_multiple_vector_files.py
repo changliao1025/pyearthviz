@@ -1,28 +1,28 @@
-import os
 import datetime
+import os
 import textwrap
-import numpy as np
 from urllib.error import URLError
-from osgeo import osr, gdal, ogr
-from matplotlib.colors import ListedColormap
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import matplotlib.path as mpath
-import matplotlib.cm as cm
-from matplotlib.collections import PathCollection
-from matplotlib.path import Path
-from matplotlib.collections import PatchCollection
-from matplotlib.collections import LineCollection
-from matplotlib.patches import Polygon
-import shapely.geometry as sgeom
+
 import cartopy as cpl
 import cartopy.crs as ccrs
-from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
-from pyearth.toolbox.math.stat.remap import remap
-from pyearthviz.map.zebra_frame import zebra_frame
+import matplotlib as mpl
+import matplotlib.cm as cm
+import matplotlib.path as mpath
+import matplotlib.pyplot as plt
+import numpy as np
+import shapely.geometry as sgeom
+from cartopy.mpl.gridliner import LATITUDE_FORMATTER, LONGITUDE_FORMATTER
+from matplotlib.collections import LineCollection, PatchCollection, PathCollection
+from matplotlib.colors import ListedColormap
+from matplotlib.patches import Polygon
+from matplotlib.path import Path
+from osgeo import gdal, ogr, osr
 from pyearth.gis.location.get_geometry_coordinates import get_geometry_coordinates
+from pyearth.toolbox.math.stat.remap import remap
+
 from pyearthviz.formatter import OOMFormatter
 from pyearthviz.map import RasterTileServer
+from pyearthviz.map.zebra_frame import zebra_frame
 
 # get the current year for openstreetmap copy right label
 
@@ -71,7 +71,7 @@ def map_multiple_vector_files(
     plot vector data on a map
     currently only support geojson and shapefile
     by default, the program will plot all the polygons in the file
-    in the furture, the program will support to plot only a subset of polygons
+    in the future, the program will support to plot only a subset of polygons
 
     Because of the overlay effect, it is ideal to plot them in the following order: polygon->polyling->point
 
@@ -105,7 +105,7 @@ def map_multiple_vector_files(
         arr = np.array(aFiletype_in)
         # Check if the array is descending or has the same values
         is_descending = np.all(np.diff(arr) <= 0)
-        if is_descending == True:
+        if is_descending:
             pass
         else:
             print("Error: the vector type is not correct")
@@ -246,7 +246,6 @@ def map_multiple_vector_files(
     plt.rcParams["font.serif"] = sFont
     plt.rcParams["mathtext.fontset"] = "dejavuserif"
 
-
     fig = plt.figure(dpi=iDPI)
     fig.set_figwidth(iSize_x)
     fig.set_figheight(iSize_y)
@@ -349,7 +348,9 @@ def map_multiple_vector_files(
             iBasemap_zoom_level = iBasemap_zoom_level_in
         else:
             image_size = [1000, 1000]
-            scale_denominator = RasterTileServer.calculate_scale_denominator(aExtent, image_size)
+            scale_denominator = RasterTileServer.calculate_scale_denominator(
+                aExtent, image_size
+            )
             pSrc = osr.SpatialReference()
             pSrc.ImportFromEPSG(3857)  # mercator
             pProjection = pSrc.ExportToWkt()
@@ -372,7 +373,8 @@ def map_multiple_vector_files(
                 # Manual fetch + stitch + imshow through the unified interface;
                 # this avoids cartopy's add_image, which can shift tiles.
                 pBasemap = pTile_service.add_basemap(
-                    ax, aExtent, iBasemap_zoom_level, alpha=dAlpha - i * 0.1       )
+                    ax, aExtent, iBasemap_zoom_level, alpha=dAlpha - i * 0.1
+                )
                 aLicense_info_list.append(pBasemap.attribution)
 
             # Combine all license info and display once
@@ -383,7 +385,8 @@ def map_multiple_vector_files(
                 sLicense_info_wrapped = "\n".join(
                     textwrap.wrap(sLicense_info, width=cwidth)
                 )
-                ax.text(0.5,
+                ax.text(
+                    0.5,
                     0.03,
                     sLicense_info_wrapped,
                     transform=ax.transAxes,
@@ -429,7 +432,7 @@ def map_multiple_vector_files(
                 value = feature.GetField(sVariable)
                 # Append the value to the list
                 values.append(value)
-            # conver aValue to numpy array
+            # convert aValue to numpy array
             aValue = np.array(values)
             aValue_all.append(aValue)
         else:

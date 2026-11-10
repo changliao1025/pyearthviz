@@ -1,22 +1,22 @@
-import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
 from pyearth.toolbox.math.stat.scipy_bivariate_kde import scipy_bivariate_kde
 
 
 def fmt0(x):
-    a, b = "{:.1e}".format(x).split("e")
+    a, b = f"{x:.1e}".split("e")
     b = int(b)
-    return r"${} \times 10^{{{}}}$".format(a, b)
+    return rf"${a} \times 10^{{{b}}}$"
 
 
 def fmt1(x):
-    a = "{:.1f}".format(x)
+    a = f"{x:.1f}"
     return a
 
 
 def fmt2(x):
-    a = "{:.1e}".format(x)
+    a = f"{x:.1e}"
     return a
 
 
@@ -218,7 +218,7 @@ def scatter_plot_data_density(
     if iFlag_log_x == 1:
         aLabel_x = []
         for i in np.arange(dMin_x, dMax_x + 1, 1):
-            sTicklabel = r"$10^{{{}}}$".format(int(i))
+            sTicklabel = rf"$10^{{{int(i)}}}$"
             aLabel_x.append(sTicklabel)
             pass
 
@@ -239,7 +239,7 @@ def scatter_plot_data_density(
     if iFlag_log_y == 1:
         aLabel_y = []
         for i in np.arange(dMin_y, dMax_y + 1, 1):
-            sTicklabel = r"$10^{{{}}}$".format(int(i))
+            sTicklabel = rf"$10^{{{int(i)}}}$"
             aLabel_y.append(sTicklabel)
             pass
 
@@ -274,7 +274,7 @@ def scatter_plot_data_density(
         fontsize=12,
     )
 
-    sText = r"R: " + "{:.2f}".format(r_value)
+    sText = r"R: " + f"{r_value:.2f}"
     ax_scatter.text(
         0.05,
         0.9,
@@ -286,7 +286,7 @@ def scatter_plot_data_density(
         fontsize=12,
     )
 
-    sText = r"P-value: " + "{:.2e}".format(p_value)
+    sText = r"P-value: " + f"{p_value:.2e}"
     ax_scatter.text(
         0.05,
         0.85,

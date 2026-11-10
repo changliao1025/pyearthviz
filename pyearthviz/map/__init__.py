@@ -10,4 +10,4 @@ Main Components:
 
 from pyearthviz.map.raster_map_servers import RasterTileServer
 
-__all__ = ['RasterTileServer']
+__all__ = ["RasterTileServer"]

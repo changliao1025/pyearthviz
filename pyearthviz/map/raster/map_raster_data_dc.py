@@ -1,13 +1,13 @@
-import numpy as np
+import cartopy as cpl
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import cartopy as cpl
+import numpy as np
+from cartopy.mpl.gridliner import LATITUDE_FORMATTER, LONGITUDE_FORMATTER
+from pyearth.toolbox.data.cgpercentiles import cgpercentiles
 
-from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 from pyearthviz.color.create_diverge_rgb_color_hex import (
     create_diverge_rgb_color_hex,
 )
-from pyearth.toolbox.data.cgpercentiles import cgpercentiles
 from pyearthviz.formatter import log_formatter
 
 pProjection = cpl.crs.PlateCarree()
@@ -273,9 +273,9 @@ def map_raster_data_dc(
     aLabel = list()
     for i in range(nInterval):
         if iFlag_scientific_notation_colorbar == 1:
-            sLabel = "{:.1e}".format(aInterval[i])
+            sLabel = f"{aInterval[i]:.1e}"
         else:
-            sLabel = "{:.1f}".format(aInterval[i])
+            sLabel = f"{aInterval[i]:.1f}"
         aLabel.append(sLabel)
 
     bounds0 = np.linspace(0, nInterval - 1, nInterval)

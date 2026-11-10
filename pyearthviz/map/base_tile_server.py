@@ -10,10 +10,12 @@ shared by raster and vector tile server implementations in this package:
 Subclasses should define a `_PROVIDERS` class attribute describing
 available providers and may extend behavior as needed.
 """
-from typing import List, Optional, Dict, Any, Tuple
+
+import math
 import os
 import warnings
-import math
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
 from osgeo import osr
 
@@ -36,15 +38,18 @@ class BaseTileServer:
 
     def __init__(self, provider: str, api_key: Optional[str] = None) -> None:
         if provider not in self._PROVIDERS:
-            available = ', '.join(self._PROVIDERS.keys())
-            raise ValueError(f"Unknown provider '{provider}'. Available providers: {available}")
+            available = ", ".join(self._PROVIDERS.keys())
+            raise ValueError(
+                f"Unknown provider '{provider}'. Available providers: {available}"
+            )
 
         self.provider = provider
         self._config = self._PROVIDERS[provider].copy()
-        self.tile_size = self._config.get('tile_size')
+        self.tile_size: int = int(self._config.get("tile_size", 256))
+        self.api_key: Optional[str] = None
 
         # API key resolution
-        if self._config.get('requires_api_key'):
+        if self._config.get("requires_api_key"):
             if api_key:
                 self.api_key = api_key
             else:
@@ -64,7 +69,7 @@ class BaseTileServer:
 
     def _resolve_api_env_key(self, provider: str) -> Optional[str]:
         """Return the environment variable name configured for this provider."""
-        return self._config.get('api_env')
+        return self._config.get("api_env")
 
     # Instance methods
 
@@ -74,7 +79,7 @@ class BaseTileServer:
         Returns:
             URL template string with placeholders for {z}, {x}, {y}, and optionally {api_key}
         """
-        return self._config.get('url_template', '')
+        return str(self._config.get("url_template", ""))
 
     def _build_tile_url(self, z: int, x: int, y: int) -> str:
         """Format the configured URL template for a tile.
@@ -83,7 +88,7 @@ class BaseTileServer:
         contains `{z}`, `{x}`, `{y}` and optionally `{api_key}` placeholders.
         """
         template = self.get_url_template()
-        return template.format(z=z, x=x, y=y, api_key=self.api_key or '')
+        return template.format(z=z, x=x, y=y, api_key=self.api_key or "")
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(provider='{self.provider}', tile_size={self.tile_size})"
@@ -131,14 +136,14 @@ class BaseTileServer:
         return scale_denominator
 
     @staticmethod
-    def _calculate_tile_extent_web_mercator(x: int, y: int, z: int) -> Tuple[float, float, float, float]:
+    def _calculate_tile_extent_web_mercator(
+        x: int, y: int, z: int
+    ) -> Tuple[float, float, float, float]:
         """Calculate the Web Mercator extent for a tile at a given z/x/y."""
         world_extent = 20037508.342789244
-        tile_width = (2 * world_extent) / (2 ** z)
+        tile_width = (2 * world_extent) / (2**z)
         min_x = -world_extent + (x * tile_width)
         max_x = min_x + tile_width
         max_y = world_extent - (y * tile_width)
         min_y = max_y - tile_width
         return (min_x, max_x, min_y, max_y)
-
-

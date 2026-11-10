@@ -1,7 +1,6 @@
-import numpy as np
-
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def cdf_plot(
@@ -110,7 +109,7 @@ def cdf_plot(
     # create the corresponding number of labels (= the text you want to display)
     labels = []
     labels.append(sLabel_legend)
-    # create the legend, supressing the blank space of the empty line symbol    and the
+    # create the legend, suppressing the blank space of the empty line symbol    and the
     # padding between symbol and label by setting handlelenght and  handletextpad
     ax_cdf.legend(
         handles,
