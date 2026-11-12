@@ -1,6 +1,7 @@
 import os
+
 import numpy as np
-from osgeo import osr, gdal, ogr
+from osgeo import gdal, ogr, osr
 
 
 def merge_vector_polygon_files(

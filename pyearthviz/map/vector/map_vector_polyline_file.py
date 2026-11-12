@@ -1,24 +1,26 @@
-import os
 import datetime
+import os
 import textwrap
-import numpy as np
 from urllib.error import URLError
-from osgeo import osr, gdal, ogr
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-from matplotlib.collections import LineCollection
-from matplotlib.colors import ListedColormap
+
 import cartopy as cpl
 import cartopy.crs as ccrs
-from cartopy.io.img_tiles import OSM
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import numpy as np
 import shapely.geometry as sgeom
-from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
+from cartopy.io.img_tiles import OSM
+from cartopy.mpl.gridliner import LATITUDE_FORMATTER, LONGITUDE_FORMATTER
+from matplotlib.collections import LineCollection
+from matplotlib.colors import ListedColormap
+from osgeo import gdal, ogr, osr
 from pyearth.gis.gdal.gdal_vector_format_support import get_vector_driver_from_filename
 from pyearth.gis.location.get_geometry_coordinates import get_geometry_coordinates
-from pyearthviz.formatter import OOMFormatter
-from pyearthviz.map.zebra_frame import zebra_frame
 from pyearth.toolbox.math.stat.remap import remap
+
+from pyearthviz.formatter import OOMFormatter
 from pyearthviz.map import RasterTileServer
+from pyearthviz.map.zebra_frame import zebra_frame
 
 iYear_current = datetime.datetime.now().year
 sYear = str(iYear_current)
@@ -370,7 +372,9 @@ def map_vector_polyline_file(
             iBasemap_zoom_level = iBasemap_zoom_level_in
         else:
             image_size = [1000, 1000]
-            scale_denominator = RasterTileServer.calculate_scale_denominator(aExtent, image_size)
+            scale_denominator = RasterTileServer.calculate_scale_denominator(
+                aExtent, image_size
+            )
             pSrc = osr.SpatialReference()
             pSrc.ImportFromEPSG(3857)  # mercator
             pProjection = pSrc.ExportToWkt()
@@ -386,7 +390,7 @@ def map_vector_polyline_file(
                 nTile_provider = 5
             dAlpha = 1.0
             aLicense_info_list = []  # Collect all license info
-            #for sBasemap_provider in aBasemap_provider_in:
+            # for sBasemap_provider in aBasemap_provider_in:
             for i in range(nTile_provider):
                 sBasemap_provider = aBasemap_provider_in[i]
                 # Use RasterTileServer for custom providers
@@ -394,7 +398,8 @@ def map_vector_polyline_file(
                 # Manual fetch + stitch + imshow through the unified interface;
                 # this avoids cartopy's add_image, which can shift tiles.
                 pBasemap = pTile_service.add_basemap(
-                    ax, aExtent, iBasemap_zoom_level, alpha=dAlpha - i * 0.1       )
+                    ax, aExtent, iBasemap_zoom_level, alpha=dAlpha - i * 0.1
+                )
                 aLicense_info_list.append(pBasemap.attribution)
 
             # Combine all license info and display once
@@ -403,7 +408,8 @@ def map_vector_polyline_file(
                 sLicense_info_wrapped = "\n".join(
                     textwrap.wrap(sLicense_info, width=cwidth)
                 )
-                ax.text(0.5,
+                ax.text(
+                    0.5,
                     0.05,
                     sLicense_info_wrapped,
                     transform=ax.transAxes,
@@ -561,7 +567,7 @@ def map_vector_polyline_file(
             )
         else:
             if iFlag_discrete == 1:
-                formatter = mpl.ticker.FuncFormatter(lambda x, pos: "{:.0f}".format(x))
+                formatter = mpl.ticker.FuncFormatter(lambda x, pos: f"{x:.0f}")
                 cb = mpl.colorbar.ColorbarBase(
                     ax_cb,
                     orientation="vertical",

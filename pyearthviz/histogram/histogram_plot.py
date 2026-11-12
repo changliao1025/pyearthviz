@@ -1,14 +1,15 @@
+import copy
 import os
-import numpy as np
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import copy
+import numpy as np
+from pyearth.toolbox.data.list.list_alg import list_max, list_min
 
+from pyearthviz.color.choose_n_color import polylinear_gradient, rand_hex_color
 from pyearthviz.color.create_diverge_rgb_color_hex import (
     create_diverge_rgb_color_hex,
 )
-from pyearthviz.color.choose_n_color import polylinear_gradient, rand_hex_color
-from pyearth.toolbox.data.list.list_alg import list_max, list_min
 
 
 def histogram_plot(
@@ -310,7 +311,7 @@ def histogram_plot(
         for i in np.arange(0, len(xtickslocs), 1):
             ii = xtickslocs[i]
             iii = sFormat_x.format(ii)
-            sTicklabel = r"$10^{{{}}}$".format(iii)
+            sTicklabel = rf"$10^{{{iii}}}$"
             aLabel_x.append(sTicklabel)
             pass
 

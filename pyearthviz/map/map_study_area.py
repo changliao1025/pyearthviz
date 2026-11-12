@@ -1,20 +1,17 @@
 # plot a map of study area which has google earth image, slope, and dem
-import numpy as np
-from osgeo import osr, gdal, ogr
-
+import cartopy as cpl
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import cartopy as cpl
-
-from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
-
+import numpy as np
+from cartopy.mpl.ticker import LatitudeFormatter, LongitudeFormatter
+from osgeo import gdal, ogr, osr
 from pyearth.gis.gdal.read.raster.gdal_read_geotiff_file import gdal_read_geotiff_file
+from pyearth.gis.location.get_geometry_coordinates import get_geometry_coordinates
+from pyearth.gis.location.Google_MetersPerPixel import Google_MetersPerPixel
 from pyearth.gis.spatialref.reproject_coordinates import (
     reproject_coordinates,
     reproject_coordinates_batch,
 )
-from pyearth.gis.location.Google_MetersPerPixel import Google_MetersPerPixel
-from pyearth.gis.location.get_geometry_coordinates import get_geometry_coordinates
 
 
 def plot_study_area(
@@ -110,6 +107,7 @@ def plot_study_area(
 
     # plot flowline if available
     pDriver = ogr.GetDriverByName("GeoJSON")
+    lID = 0
     if sFilename_polyline_in is None:
         pass
     else:
@@ -219,11 +217,11 @@ def plot_study_area(
     aImage_extent = [xrange[0], xrange[1], yrange[0], yrange[1]]
     ax_ge = fig.add_axes([0.1, 0.75, 0.2, 0.2], projection=ge_proj)
 
-    sLongitude_center = "{:0f}".format(dLongitude_center)
-    sLatitude_center = "{:0f}".format(dLatitude_center)
-    sZoom = "{:0d}".format(iZoom)
+    sLongitude_center = f"{dLongitude_center:0f}"
+    sLatitude_center = f"{dLatitude_center:0f}"
+    sZoom = f"{iZoom:0d}"
 
-    sResolution = "{:0d}".format(xsize_ge) + "x" + "{:0d}".format(ysize_ge)
+    sResolution = f"{xsize_ge:0d}" + "x" + f"{ysize_ge:0d}"
     sMap_type = "hybrid"
     # obtain GCP APIs from your system
     sGoogleMapAPI = ""

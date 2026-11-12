@@ -1,7 +1,8 @@
 import itertools
-from matplotlib.patheffects import Stroke, Normal
-import numpy as np
+
 import cartopy.mpl.geoaxes
+import numpy as np
+from matplotlib.patheffects import Normal, Stroke
 
 
 def zebra_frame(self, lw=3, crs=None, zorder=None, iFlag_outer_frame_in=None):

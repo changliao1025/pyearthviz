@@ -1,5 +1,5 @@
-import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors  # Add this import
+import matplotlib.pyplot as plt
 
 
 def create_diverge_rgb_color_hex(ncolor, iFlag_reverse_in=None):
