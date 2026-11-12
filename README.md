@@ -2,8 +2,10 @@
 
 [![DOI](https://zenodo.org/badge/1137223209.svg)](https://doi.org/10.5281/zenodo.18797442)
 [![License](https://img.shields.io/badge/license-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+
 [![PyPI version](https://badge.fury.io/py/pyearthviz.svg)](https://badge.fury.io/py/pyearthviz)
 [![PyPI Downloads](https://static.pepy.tech/badge/pyearthviz)](https://pepy.tech/project/pyearthviz)
+
 [![Conda Version](https://img.shields.io/conda/v/conda-forge/pyearthviz.svg)](https://anaconda.org/conda-forge/pyearthviz)
 [![Conda Downloads](https://anaconda.org/conda-forge/pyearthviz/badges/downloads.svg)](https://anaconda.org/conda-forge/pyearthviz)
 
