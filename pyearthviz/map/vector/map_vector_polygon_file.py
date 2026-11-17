@@ -84,6 +84,7 @@ def map_vector_polygon_file(
     aBasemap_provider_in=None,
     iBasemap_zoom_level_in=None,
     sColor_in=None,
+    sEdgecolor_in=None,
     sColormap_in=None,
     sTitle_in=None,
     iDPI_in=None,
@@ -628,11 +629,13 @@ def map_vector_polygon_file(
         if iFlag_color == 1:
             if iFlag_fill:
                 aPatch = [mpolygon(poly, closed=True) for poly in aPolygon]
+                edge_col = sEdgecolor_in if sEdgecolor_in is not None else aColor
                 pPC = PatchCollection(
                     aPatch,
                     alpha=dAlpha,
-                    edgecolor=aColor,
+                    edgecolor=edge_col,
                     facecolor=aColor,
+                    linewidths=dLinewidth,
                     transform=pProjection_data,
                 )
             else:
