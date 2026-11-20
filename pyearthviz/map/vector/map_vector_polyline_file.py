@@ -46,6 +46,8 @@ def map_vector_polyline_file(
     iSize_y_in=None,
     iFont_size_in=None,
     sField_thickness_in=None,
+    iThickness_min_in=None,
+    iThickness_max_in=None,
     sField_color_in=None,
     sColormap_in=None,
     sTitle_in=None,
@@ -69,6 +71,8 @@ def map_vector_polyline_file(
         sFilename_output_in (_type_): _description_
         iFlag_thickness_in (_type_, optional): _description_. Defaults to None.
         sField_thickness_in (_type_, optional): _description_. Defaults to None.
+        iThickness_min_in (_type_, optional): _description_. Defaults to None.
+        iThickness_max_in (_type_, optional): _description_. Defaults to None.
         iFlag_scientific_notation_colorbar_in (_type_, optional): _description_. Defaults to None.
         sColormap_in (_type_, optional): _description_. Defaults to None.
         sTitle_in (_type_, optional): _description_. Defaults to None.
@@ -326,8 +330,15 @@ def map_vector_polyline_file(
     else:
         pCmap = plt.colormaps[sColormap]
 
-    iThickness_max = 2.5
-    iThickness_min = 0.3
+    if iThickness_max_in is not None:
+        iThickness_max = iThickness_max_in
+    else:
+        iThickness_max = 2.5
+
+    if iThickness_min_in is not None:
+        iThickness_min = iThickness_min_in
+    else:
+        iThickness_min = 0.3
     # switch to collection in next development
     aPolyline = list()
     aColor = list()

@@ -55,6 +55,8 @@ def map_multiple_vector_files(
     iSize_x_in=None,
     iSize_y_in=None,
     aThickness_in=None,
+    iThickness_min_in=None,
+    iThickness_max_in=None,
     aColor_in=None,
     aMissing_value_in=None,
     aData_max_in=None,
@@ -88,6 +90,9 @@ def map_multiple_vector_files(
         dData_min_in (_type_, optional): _description_. Defaults to None.
         sExtend_in (_type_, optional): _description_. Defaults to None.
         sUnit_in (_type_, optional): _description_. Defaults to None.
+        aThickness_in (_type_, optional): _description_. Defaults to None.
+        iThickness_min_in (_type_, optional): _description_. Defaults to None.
+        iThickness_max_in (_type_, optional): _description_. Defaults to None.
         aLegend_in (_type_, optional): _description_. Defaults to None.
     """
 
@@ -438,8 +443,15 @@ def map_multiple_vector_files(
         else:
             aValue_all.append(aValue)
 
-    iThickness_max = 2.5
-    iThickness_min = 0.3
+    if iThickness_max_in is not None:
+        iThickness_max = iThickness_max_in
+    else:
+        iThickness_max = 2.5
+
+    if iThickness_min_in is not None:
+        iThickness_min = iThickness_min_in
+    else:
+        iThickness_min = 0.3
 
     # set min and max
     for i in range(nFile):
@@ -525,8 +537,22 @@ def map_multiple_vector_files(
 
                     dValue = np.clip(dValue, dValue_min, dValue_max)
 
+                    if isinstance(iThickness_min, (list, tuple, np.ndarray)):
+                        iThickness_min_file = iThickness_min[i]
+                    else:
+                        iThickness_min_file = iThickness_min
+
+                    if isinstance(iThickness_max, (list, tuple, np.ndarray)):
+                        iThickness_max_file = iThickness_max[i]
+                    else:
+                        iThickness_max_file = iThickness_max
+
                     iThickness = remap(
-                        dValue, dValue_min, dValue_max, iThickness_min, iThickness_max
+                        dValue,
+                        dValue_min,
+                        dValue_max,
+                        iThickness_min_file,
+                        iThickness_max_file,
                     )
                 else:
                     iThickness = 0.25
