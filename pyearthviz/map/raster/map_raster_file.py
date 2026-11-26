@@ -1,20 +1,19 @@
 import os
-import numpy as np
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
 
 plt.ion()
 import cartopy as cpl
-from osgeo import osr, gdal, ogr
 import cartopy.crs as ccrs
-from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
-
-from pyearth.toolbox.data.cgpercentiles import cgpercentiles
-from pyearthviz.formatter import log_formatter
-from pyearthviz.formatter import OOMFormatter
-from pyearthviz.map.zebra_frame import zebra_frame
+from cartopy.mpl.gridliner import LATITUDE_FORMATTER, LONGITUDE_FORMATTER
+from osgeo import gdal, ogr, osr
 from pyearth.gis.spatialref.reproject_coordinates import reproject_coordinates_batch
+from pyearth.toolbox.data.cgpercentiles import cgpercentiles
+
+from pyearthviz.formatter import OOMFormatter, log_formatter
+from pyearthviz.map.zebra_frame import zebra_frame
 
 pProjection_default = cpl.crs.PlateCarree()
 
@@ -51,7 +50,7 @@ def map_raster_file(
     pProjection_wgs84 = pSrs.ExportToWkt()
     pSRS_geodetic = ccrs.Geodetic()
 
-    if os.path.exists(sFilename_in) == False:
+    if not os.path.exists(sFilename_in):
         print("Error: file does not exist", sFilename_in)
         return
 
@@ -188,7 +187,7 @@ def map_raster_file(
     if aExtent_in is None:
         # check projection
         if pSpatial_refernce.IsProjected():
-            # conver the extent to wgs84
+            # convert the extent to wgs84
             aX_new, aY_new = reproject_coordinates_batch(
                 [aImage_extent[0], aImage_extent[1]],
                 [aImage_extent[2], aImage_extent[3]],

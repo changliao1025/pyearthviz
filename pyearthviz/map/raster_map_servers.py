@@ -26,16 +26,18 @@ Example:
     >>> # List available providers
     >>> providers = RasterTileServer.get_available_providers()
 """
-import os
-from io import BytesIO
-from typing import List, Tuple, Optional, Dict, Any, NamedTuple
-from datetime import datetime
-import warnings
+
 import math
+import os
+import warnings
+from datetime import datetime
+from io import BytesIO
+from typing import Any, Dict, List, NamedTuple, Optional, Tuple
+
+import cartopy.crs as ccrs
+import cartopy.io.img_tiles as cimgt
 import numpy as np
 from osgeo import osr
-import cartopy.io.img_tiles as cimgt
-import cartopy.crs as ccrs
 
 try:
     import requests
@@ -45,6 +47,7 @@ except ImportError:
     Image = None
 
 from .base_tile_server import BaseTileServer
+
 
 def mercator_y_to_lat(y_metre: float) -> float:
     """Convert Web‑Mercator Y (meters) to latitude in degrees."""
@@ -67,6 +70,7 @@ class ManualBasemap(NamedTuple):
         origin: imshow origin matching the stitched image (``'upper'``).
         attribution: license/attribution string for the provider.
     """
+
     image: np.ndarray
     extent: List[float]
     crs: Any
@@ -108,7 +112,7 @@ class RasterTileServer(BaseTileServer):
     # Backward-compatible provider name aliases resolved in __init__
     # (e.g., the legacy bare 'OSM' maps to the registered 'OSM.Standard').
     _PROVIDER_ALIASES: Dict[str, str] = {
-        'OSM': 'OSM.Standard',
+        "OSM": "OSM.Standard",
     }
 
     @classmethod
@@ -133,370 +137,372 @@ class RasterTileServer(BaseTileServer):
             >>> server = RasterTileServer('Tianditu.Vector')  # uses registered token
         """
         if provider not in cls._PROVIDERS:
-            available = ', '.join(cls._PROVIDERS.keys())
-            raise ValueError(f"Unknown provider '{provider}'. Available providers: {available}")
+            available = ", ".join(cls._PROVIDERS.keys())
+            raise ValueError(
+                f"Unknown provider '{provider}'. Available providers: {available}"
+            )
         cls._REGISTERED_API_KEYS[provider] = api_key
 
     # Provider registry with configuration for each tile server
     _PROVIDERS = {
-        'Stadia.StamenTerrain': {
-            'url_template': 'https://tiles.stadiamaps.com/tiles/stamen_terrain/{z}/{x}/{y}@2x.png?api_key={api_key}',
-            'tile_size': 512,
-            'requires_api_key': True,
-            'api_env': 'STADIA_API_KEY',
-            'special_handling': None,
-            'description': 'Stadia Maps terrain tiles (formerly Stamen)',
-            'min_zoom': 0,
-            'max_zoom': 18,
-            'attribution': '© Stadia Maps, © Stamen Design, © OpenMapTiles, © OpenStreetMap contributors',
-            'license_url': 'https://stadiamaps.com/terms-of-service/',
-            'data_source': 'OpenStreetMap'
+        "Stadia.StamenTerrain": {
+            "url_template": "https://tiles.stadiamaps.com/tiles/stamen_terrain/{z}/{x}/{y}@2x.png?api_key={api_key}",
+            "tile_size": 512,
+            "requires_api_key": True,
+            "api_env": "STADIA_API_KEY",
+            "special_handling": None,
+            "description": "Stadia Maps terrain tiles (formerly Stamen)",
+            "min_zoom": 0,
+            "max_zoom": 18,
+            "attribution": "© Stadia Maps, © Stamen Design, © OpenMapTiles, © OpenStreetMap contributors",
+            "license_url": "https://stadiamaps.com/terms-of-service/",
+            "data_source": "OpenStreetMap",
         },
-        'Stadia.AlidadeSmooth': {
-            'url_template': 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}@2x.png?api_key={api_key}',
-            'tile_size': 512,
-            'requires_api_key': True,
-            'api_env': 'STADIA_API_KEY',
-            'special_handling': None,
-            'description': 'Stadia Maps smooth basemap',
-            'min_zoom': 0,
-            'max_zoom': 20,
-            'attribution': '© Stadia Maps, © OpenMapTiles, © OpenStreetMap contributors',
-            'license_url': 'https://stadiamaps.com/terms-of-service/',
-            'data_source': 'OpenStreetMap'
+        "Stadia.AlidadeSmooth": {
+            "url_template": "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}@2x.png?api_key={api_key}",
+            "tile_size": 512,
+            "requires_api_key": True,
+            "api_env": "STADIA_API_KEY",
+            "special_handling": None,
+            "description": "Stadia Maps smooth basemap",
+            "min_zoom": 0,
+            "max_zoom": 20,
+            "attribution": "© Stadia Maps, © OpenMapTiles, © OpenStreetMap contributors",
+            "license_url": "https://stadiamaps.com/terms-of-service/",
+            "data_source": "OpenStreetMap",
         },
-        'Esri.Terrain': {
-            'url_template': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Terrain_Base/MapServer/tile/{z}/{y}/{x}',
-            'tile_size': 256,
-            'requires_api_key': False,
-            'special_handling': None,
-            'description': 'Esri World Terrain Base',
-            'min_zoom': 0,
-            'max_zoom': 13,
-            'attribution': 'Source: Esri, Earthstar Geographics',
-            'license_url': 'https://www.esri.com/en-us/legal/terms/full-master-agreement',
-            'data_source': 'Esri'
+        "Esri.Terrain": {
+            "url_template": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Terrain_Base/MapServer/tile/{z}/{y}/{x}",
+            "tile_size": 256,
+            "requires_api_key": False,
+            "special_handling": None,
+            "description": "Esri World Terrain Base",
+            "min_zoom": 0,
+            "max_zoom": 13,
+            "attribution": "Source: Esri, Earthstar Geographics",
+            "license_url": "https://www.esri.com/en-us/legal/terms/full-master-agreement",
+            "data_source": "Esri",
         },
-        'Esri.Relief': {
-            'url_template': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}.jpg',
-            'tile_size': 256,
-            'requires_api_key': False,
-            'special_handling': None,
-            'description': 'Esri World Shaded Relief',
-            'min_zoom': 0,
-            'max_zoom': 13,
-            'attribution': 'Source: Esri',
-            'license_url': 'https://www.esri.com/en-us/legal/terms/full-master-agreement',
-            'data_source': 'Esri'
+        "Esri.Relief": {
+            "url_template": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}.jpg",
+            "tile_size": 256,
+            "requires_api_key": False,
+            "special_handling": None,
+            "description": "Esri World Shaded Relief",
+            "min_zoom": 0,
+            "max_zoom": 13,
+            "attribution": "Source: Esri",
+            "license_url": "https://www.esri.com/en-us/legal/terms/full-master-agreement",
+            "data_source": "Esri",
         },
-        #https://tiles.arcgis.com/tiles/P3ePLMYs2RVChkJx/arcgis/rest/services/Esri_Hydro_Reference_Overlay/MapServer
-        'Esri.Hydro': {
-            'url_template': 'https://tiles.arcgis.com/tiles/P3ePLMYs2RVChkJx/arcgis/rest/services/Esri_Hydro_Reference_Overlay/MapServer/tile/{z}/{y}/{x}',
-            'tile_size': 256,
-            'requires_api_key': False,
-            'special_handling': 'make_black_transparent',
-            'description': 'Esri Hydro Reference Overlay',
-            'min_zoom': 0,
-            'max_zoom': 19,
-            'attribution': 'Source: Esri',
-            'license_url': 'https://www.esri.com/en-us/legal/terms/full-master-agreement',
-            'data_source': 'Esri'
+        # https://tiles.arcgis.com/tiles/P3ePLMYs2RVChkJx/arcgis/rest/services/Esri_Hydro_Reference_Overlay/MapServer
+        "Esri.Hydro": {
+            "url_template": "https://tiles.arcgis.com/tiles/P3ePLMYs2RVChkJx/arcgis/rest/services/Esri_Hydro_Reference_Overlay/MapServer/tile/{z}/{y}/{x}",
+            "tile_size": 256,
+            "requires_api_key": False,
+            "special_handling": "make_black_transparent",
+            "description": "Esri Hydro Reference Overlay",
+            "min_zoom": 0,
+            "max_zoom": 19,
+            "attribution": "Source: Esri",
+            "license_url": "https://www.esri.com/en-us/legal/terms/full-master-agreement",
+            "data_source": "Esri",
         },
-        'Esri.WorldImagery': {
-            'url_template': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-            'tile_size': 256,
-            'requires_api_key': False,
-            'special_handling': None,
-            'description': 'Esri World Imagery (satellite)',
-            'min_zoom': 0,
-            'max_zoom': 19,
-            'attribution': 'Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
-            'license_url': 'https://www.esri.com/en-us/legal/terms/full-master-agreement',
-            'data_source': 'Esri/Maxar'
+        "Esri.WorldImagery": {
+            "url_template": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+            "tile_size": 256,
+            "requires_api_key": False,
+            "special_handling": None,
+            "description": "Esri World Imagery (satellite)",
+            "min_zoom": 0,
+            "max_zoom": 19,
+            "attribution": "Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+            "license_url": "https://www.esri.com/en-us/legal/terms/full-master-agreement",
+            "data_source": "Esri/Maxar",
         },
-        'Esri.WorldTopo': {
-            'url_template': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
-            'tile_size': 256,
-            'requires_api_key': False,
-            'special_handling': None,
-            'description': 'Esri World Topographic Map',
-            'min_zoom': 0,
-            'max_zoom': 19,
-            'attribution': 'Source: Esri, HERE, Garmin, Intermap, increment P Corp., GEBCO, USGS, FAO, NPS, NRCAN, GeoBase, IGN, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), © OpenStreetMap contributors, GIS User Community',
-            'license_url': 'https://www.esri.com/en-us/legal/terms/full-master-agreement',
-            'data_source': 'Esri'
+        "Esri.WorldTopo": {
+            "url_template": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
+            "tile_size": 256,
+            "requires_api_key": False,
+            "special_handling": None,
+            "description": "Esri World Topographic Map",
+            "min_zoom": 0,
+            "max_zoom": 19,
+            "attribution": "Source: Esri, HERE, Garmin, Intermap, increment P Corp., GEBCO, USGS, FAO, NPS, NRCAN, GeoBase, IGN, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), © OpenStreetMap contributors, GIS User Community",
+            "license_url": "https://www.esri.com/en-us/legal/terms/full-master-agreement",
+            "data_source": "Esri",
         },
-        'Esri.NatGeo': {
-            'url_template': 'https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}',
-            'tile_size': 256,
-            'requires_api_key': False,
-            'special_handling': None,
-            'description': 'Esri National Geographic World Map',
-            'min_zoom': 0,
-            'max_zoom': 16,
-            'attribution': 'Source: National Geographic, Esri, Garmin, HERE, UNEP-WCMC, USGS, NASA, ESA, METI, NRCAN, GEBCO, NOAA, increment P Corp.',
-            'license_url': 'https://www.esri.com/en-us/legal/terms/full-master-agreement',
-            'data_source': 'National Geographic/Esri'
+        "Esri.NatGeo": {
+            "url_template": "https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}",
+            "tile_size": 256,
+            "requires_api_key": False,
+            "special_handling": None,
+            "description": "Esri National Geographic World Map",
+            "min_zoom": 0,
+            "max_zoom": 16,
+            "attribution": "Source: National Geographic, Esri, Garmin, HERE, UNEP-WCMC, USGS, NASA, ESA, METI, NRCAN, GEBCO, NOAA, increment P Corp.",
+            "license_url": "https://www.esri.com/en-us/legal/terms/full-master-agreement",
+            "data_source": "National Geographic/Esri",
         },
-        'Esri.WorldStreet': {
-            'url_template': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
-            'tile_size': 256,
-            'requires_api_key': False,
-            'special_handling': None,
-            'description': 'Esri World Street Map',
-            'min_zoom': 0,
-            'max_zoom': 19,
-            'attribution': 'Source: Esri, HERE, Garmin, USGS, Intermap, INCREMENT P, NRCan, Esri Japan, METI, Esri China (Hong Kong), Esri Korea, Esri (Thailand), NGCC, © OpenStreetMap contributors, GIS User Community',
-            'license_url': 'https://www.esri.com/en-us/legal/terms/full-master-agreement',
-            'data_source': 'Esri'
+        "Esri.WorldStreet": {
+            "url_template": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+            "tile_size": 256,
+            "requires_api_key": False,
+            "special_handling": None,
+            "description": "Esri World Street Map",
+            "min_zoom": 0,
+            "max_zoom": 19,
+            "attribution": "Source: Esri, HERE, Garmin, USGS, Intermap, INCREMENT P, NRCan, Esri Japan, METI, Esri China (Hong Kong), Esri Korea, Esri (Thailand), NGCC, © OpenStreetMap contributors, GIS User Community",
+            "license_url": "https://www.esri.com/en-us/legal/terms/full-master-agreement",
+            "data_source": "Esri",
         },
-        'Esri.GrayCanvasBase': {
-            'url_template': 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Gray_Canvas/MapServer/tile/{z}/{y}/{x}',
-            'tile_size': 256,
-            'requires_api_key': False,
-            'special_handling': None,
-            'description': 'Esri World Gray Canvas Base',
-            'min_zoom': 0,
-            'max_zoom': 16,
-            'attribution': 'Source: Esri, HERE, Garmin, © OpenStreetMap contributors, GIS User Community',
-            'license_url': 'https://www.esri.com/en-us/legal/terms/full-master-agreement',
-            'data_source': 'Esri'
+        "Esri.GrayCanvasBase": {
+            "url_template": "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Gray_Canvas/MapServer/tile/{z}/{y}/{x}",
+            "tile_size": 256,
+            "requires_api_key": False,
+            "special_handling": None,
+            "description": "Esri World Gray Canvas Base",
+            "min_zoom": 0,
+            "max_zoom": 16,
+            "attribution": "Source: Esri, HERE, Garmin, © OpenStreetMap contributors, GIS User Community",
+            "license_url": "https://www.esri.com/en-us/legal/terms/full-master-agreement",
+            "data_source": "Esri",
         },
-        'Esri.GrayCanvasLabels': {
-            'url_template': 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Gray_Canvas_Reference/MapServer/tile/{z}/{y}/{x}',
-            'tile_size': 256,
-            'requires_api_key': False,
-            'special_handling': None,
-            'description': 'Esri World Gray Canvas Labels',
-            'min_zoom': 0,
-            'max_zoom': 16,
-            'attribution': 'Source: Esri, HERE, Garmin, © OpenStreetMap contributors, GIS User Community',
-            'license_url': 'https://www.esri.com/en-us/legal/terms/full-master-agreement',
-            'data_source': 'Esri'
+        "Esri.GrayCanvasLabels": {
+            "url_template": "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Gray_Canvas_Reference/MapServer/tile/{z}/{y}/{x}",
+            "tile_size": 256,
+            "requires_api_key": False,
+            "special_handling": None,
+            "description": "Esri World Gray Canvas Labels",
+            "min_zoom": 0,
+            "max_zoom": 16,
+            "attribution": "Source: Esri, HERE, Garmin, © OpenStreetMap contributors, GIS User Community",
+            "license_url": "https://www.esri.com/en-us/legal/terms/full-master-agreement",
+            "data_source": "Esri",
         },
-        'Esri.WorldOceanBase': {
-            'url_template': 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}',
-            'tile_size': 256,
-            'requires_api_key': False,
-            'special_handling': None,
-            'description': 'Esri World Ocean Base',
-            'min_zoom': 0,
-            'max_zoom': 10,
-            'attribution': 'Source: Esri, GEBCO, NOAA, National Geographic, Garmin, HERE, Geonames.org',
-            'license_url': 'https://www.esri.com/en-us/legal/terms/full-master-agreement',
-            'data_source': 'Esri/GEBCO'
+        "Esri.WorldOceanBase": {
+            "url_template": "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}",
+            "tile_size": 256,
+            "requires_api_key": False,
+            "special_handling": None,
+            "description": "Esri World Ocean Base",
+            "min_zoom": 0,
+            "max_zoom": 10,
+            "attribution": "Source: Esri, GEBCO, NOAA, National Geographic, Garmin, HERE, Geonames.org",
+            "license_url": "https://www.esri.com/en-us/legal/terms/full-master-agreement",
+            "data_source": "Esri/GEBCO",
         },
-        'Carto.Positron': {
-            'url_template': 'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png',
-            'tile_size': 512,
-            'requires_api_key': False,
-            'special_handling': None,
-            'description': 'Carto Positron (light basemap)',
-            'min_zoom': 0,
-            'max_zoom': 20,
-            'attribution': '© CARTO, © OpenStreetMap contributors',
-            'license_url': 'https://carto.com/legal/',
-            'data_source': 'OpenStreetMap'
+        "Carto.Positron": {
+            "url_template": "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png",
+            "tile_size": 512,
+            "requires_api_key": False,
+            "special_handling": None,
+            "description": "Carto Positron (light basemap)",
+            "min_zoom": 0,
+            "max_zoom": 20,
+            "attribution": "© CARTO, © OpenStreetMap contributors",
+            "license_url": "https://carto.com/legal/",
+            "data_source": "OpenStreetMap",
         },
-        'Carto.DarkMatter': {
-            'url_template': 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
-            'tile_size': 512,
-            'requires_api_key': False,
-            'special_handling': None,
-            'description': 'Carto Dark Matter (dark basemap)',
-            'min_zoom': 0,
-            'max_zoom': 20,
-            'attribution': '© CARTO, © OpenStreetMap contributors',
-            'license_url': 'https://carto.com/legal/',
-            'data_source': 'OpenStreetMap'
+        "Carto.DarkMatter": {
+            "url_template": "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
+            "tile_size": 512,
+            "requires_api_key": False,
+            "special_handling": None,
+            "description": "Carto Dark Matter (dark basemap)",
+            "min_zoom": 0,
+            "max_zoom": 20,
+            "attribution": "© CARTO, © OpenStreetMap contributors",
+            "license_url": "https://carto.com/legal/",
+            "data_source": "OpenStreetMap",
         },
-        'OSM.Standard': {
-            'url_template': 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            'tile_size': 256,
-            'tms_y_flip': False,
-            'requires_api_key': False,
-            'special_handling': None,
-            'description': 'OpenStreetMap Standard tiles',
-            'min_zoom': 0,
-            'max_zoom': 19,
-            'attribution': '© OpenStreetMap contributors',
-            'license_url': 'https://www.openstreetmap.org/copyright',
-            'data_source': 'OpenStreetMap'
+        "OSM.Standard": {
+            "url_template": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+            "tile_size": 256,
+            "tms_y_flip": False,
+            "requires_api_key": False,
+            "special_handling": None,
+            "description": "OpenStreetMap Standard tiles",
+            "min_zoom": 0,
+            "max_zoom": 19,
+            "attribution": "© OpenStreetMap contributors",
+            "license_url": "https://www.openstreetmap.org/copyright",
+            "data_source": "OpenStreetMap",
         },
-        'OSM.HOT': {
-            'url_template': 'http://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
-            'tile_size': 256,
-            'requires_api_key': False,
-            'special_handling': None,
-            'description': 'OpenStreetMap Humanitarian map style',
-            'min_zoom': 0,
-            'max_zoom': 18,
-            'attribution': '© OpenStreetMap contributors, Humanitarian OSM Team',
-            'license_url': 'https://www.openstreetmap.org/copyright',
-            'data_source': 'OpenStreetMap'
+        "OSM.HOT": {
+            "url_template": "http://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+            "tile_size": 256,
+            "requires_api_key": False,
+            "special_handling": None,
+            "description": "OpenStreetMap Humanitarian map style",
+            "min_zoom": 0,
+            "max_zoom": 18,
+            "attribution": "© OpenStreetMap contributors, Humanitarian OSM Team",
+            "license_url": "https://www.openstreetmap.org/copyright",
+            "data_source": "OpenStreetMap",
         },
-        'OpenTopoMap.Contour': {
-            'url_template': 'https://tile.opentopomap.org/{z}/{x}/{y}.png',
-            'tile_size': 256,
-            'requires_api_key': False,
-            'special_handling': None,
-            'description': 'OpenTopoMap topographic map with contours',
-            'min_zoom': 0,
-            'max_zoom': 18,
-            'attribution': '© OpenTopoMap (CC-BY-SA), © OpenStreetMap contributors',
-            'license_url': 'https://opentopomap.org/about',
-            'data_source': 'OpenStreetMap/SRTM'
+        "OpenTopoMap.Contour": {
+            "url_template": "https://tile.opentopomap.org/{z}/{x}/{y}.png",
+            "tile_size": 256,
+            "requires_api_key": False,
+            "special_handling": None,
+            "description": "OpenTopoMap topographic map with contours",
+            "min_zoom": 0,
+            "max_zoom": 18,
+            "attribution": "© OpenTopoMap (CC-BY-SA), © OpenStreetMap contributors",
+            "license_url": "https://opentopomap.org/about",
+            "data_source": "OpenStreetMap/SRTM",
         },
-        'Esri.Hillshade': {
-            'url_template': 'https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}',
-            'tile_size': 256,
-            'requires_api_key': False,
-            'special_handling': None,
-            'description': 'Esri World Hillshade',
-            'min_zoom': 0,
-            'max_zoom': 18,
-            'attribution': 'Source: Esri',
-            'license_url': 'https://www.esri.com/en-us/legal/terms/full-master-agreement',
-            'data_source': 'Esri'
+        "Esri.Hillshade": {
+            "url_template": "https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}",
+            "tile_size": 256,
+            "requires_api_key": False,
+            "special_handling": None,
+            "description": "Esri World Hillshade",
+            "min_zoom": 0,
+            "max_zoom": 18,
+            "attribution": "Source: Esri",
+            "license_url": "https://www.esri.com/en-us/legal/terms/full-master-agreement",
+            "data_source": "Esri",
         },
-        'Bing.Aerial': {
-            'url_template': 'http://ecn.t3.tiles.virtualearth.net/tiles/a{q}.jpeg?g=1',
-            'url_type': 'quadkey',
-            'tile_size': 256,
-            'requires_api_key': False,
-            'special_handling': None,
-            'description': 'Bing aerial imagery (quadkey tiles)',
-            'min_zoom': 0,
-            'max_zoom': 18,
-            'attribution': '© Microsoft Bing',
-            'license_url': 'https://www.microsoft.com/en-us/maps/product',
-            'data_source': 'Bing'
+        "Bing.Aerial": {
+            "url_template": "http://ecn.t3.tiles.virtualearth.net/tiles/a{q}.jpeg?g=1",
+            "url_type": "quadkey",
+            "tile_size": 256,
+            "requires_api_key": False,
+            "special_handling": None,
+            "description": "Bing aerial imagery (quadkey tiles)",
+            "min_zoom": 0,
+            "max_zoom": 18,
+            "attribution": "© Microsoft Bing",
+            "license_url": "https://www.microsoft.com/en-us/maps/product",
+            "data_source": "Bing",
         },
-        'Google.Satellite': {
-            'url_template': 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-            'tile_size': 256,
-            'requires_api_key': False,
-            'special_handling': None,
-            'description': 'Google satellite imagery',
-            'min_zoom': 0,
-            'max_zoom': 18,
-            'attribution': '© Google',
-            'license_url': 'https://www.google.com/permissions/geoguidelines/',
-            'data_source': 'Google'
+        "Google.Satellite": {
+            "url_template": "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+            "tile_size": 256,
+            "requires_api_key": False,
+            "special_handling": None,
+            "description": "Google satellite imagery",
+            "min_zoom": 0,
+            "max_zoom": 18,
+            "attribution": "© Google",
+            "license_url": "https://www.google.com/permissions/geoguidelines/",
+            "data_source": "Google",
         },
-        'Google.Streets': {
-            'url_template': 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
-            'tile_size': 256,
-            'requires_api_key': False,
-            'special_handling': None,
-            'description': 'Google streets map',
-            'min_zoom': 0,
-            'max_zoom': 18,
-            'attribution': '© Google',
-            'license_url': 'https://www.google.com/permissions/geoguidelines/',
-            'data_source': 'Google'
+        "Google.Streets": {
+            "url_template": "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+            "tile_size": 256,
+            "requires_api_key": False,
+            "special_handling": None,
+            "description": "Google streets map",
+            "min_zoom": 0,
+            "max_zoom": 18,
+            "attribution": "© Google",
+            "license_url": "https://www.google.com/permissions/geoguidelines/",
+            "data_source": "Google",
         },
-        'Amap.Satellite': {
-            'url_template': 'https://webst01.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}',
-            'tile_size': 256,
-            'requires_api_key': False,
-            'special_handling': None,
-            'description': 'Amap (Gaode) satellite imagery',
-            'min_zoom': 0,
-            'max_zoom': 18,
-            'attribution': '© Amap (AutoNavi)',
-            'license_url': 'https://lbs.amap.com/pages/terms/',
-            'data_source': 'Amap/AutoNavi'
+        "Amap.Satellite": {
+            "url_template": "https://webst01.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}",
+            "tile_size": 256,
+            "requires_api_key": False,
+            "special_handling": None,
+            "description": "Amap (Gaode) satellite imagery",
+            "min_zoom": 0,
+            "max_zoom": 18,
+            "attribution": "© Amap (AutoNavi)",
+            "license_url": "https://lbs.amap.com/pages/terms/",
+            "data_source": "Amap/AutoNavi",
         },
-        'Amap.Road': {
-            'url_template': 'https://webst01.is.autonavi.com/appmaptile?style=8&x={x}&y={y}&z={z}',
-            'tile_size': 256,
-            'requires_api_key': False,
-            'special_handling': None,
-            'description': 'Amap (Gaode) road map',
-            'min_zoom': 0,
-            'max_zoom': 18,
-            'attribution': '© Amap (AutoNavi)',
-            'license_url': 'https://lbs.amap.com/pages/terms/',
-            'data_source': 'Amap/AutoNavi'
+        "Amap.Road": {
+            "url_template": "https://webst01.is.autonavi.com/appmaptile?style=8&x={x}&y={y}&z={z}",
+            "tile_size": 256,
+            "requires_api_key": False,
+            "special_handling": None,
+            "description": "Amap (Gaode) road map",
+            "min_zoom": 0,
+            "max_zoom": 18,
+            "attribution": "© Amap (AutoNavi)",
+            "license_url": "https://lbs.amap.com/pages/terms/",
+            "data_source": "Amap/AutoNavi",
         },
-        'Amap.Scene': {
-            'url_template': 'http://wprd04.is.autonavi.com/appmaptile?lang=zh_cn&size=1&style=7&x={x}&y={y}&z={z}',
-            'tile_size': 256,
-            'requires_api_key': False,
-            'special_handling': None,
-            'description': 'Amap (Gaode) scene map (Chinese labels)',
-            'min_zoom': 0,
-            'max_zoom': 18,
-            'attribution': '© Amap (AutoNavi)',
-            'license_url': 'https://lbs.amap.com/pages/terms/',
-            'data_source': 'Amap/AutoNavi'
+        "Amap.Scene": {
+            "url_template": "http://wprd04.is.autonavi.com/appmaptile?lang=zh_cn&size=1&style=7&x={x}&y={y}&z={z}",
+            "tile_size": 256,
+            "requires_api_key": False,
+            "special_handling": None,
+            "description": "Amap (Gaode) scene map (Chinese labels)",
+            "min_zoom": 0,
+            "max_zoom": 18,
+            "attribution": "© Amap (AutoNavi)",
+            "license_url": "https://lbs.amap.com/pages/terms/",
+            "data_source": "Amap/AutoNavi",
         },
-        'Amap.Vector': {
-            'url_template': 'https://webrd04.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=7&x={x}&y={y}&z={z}',
-            'tile_size': 256,
-            'requires_api_key': False,
-            'special_handling': None,
-            'description': 'Amap (Gaode) vector map (Chinese labels)',
-            'min_zoom': 0,
-            'max_zoom': 18,
-            'attribution': '© Amap (AutoNavi)',
-            'license_url': 'https://lbs.amap.com/pages/terms/',
-            'data_source': 'Amap/AutoNavi'
+        "Amap.Vector": {
+            "url_template": "https://webrd04.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=7&x={x}&y={y}&z={z}",
+            "tile_size": 256,
+            "requires_api_key": False,
+            "special_handling": None,
+            "description": "Amap (Gaode) vector map (Chinese labels)",
+            "min_zoom": 0,
+            "max_zoom": 18,
+            "attribution": "© Amap (AutoNavi)",
+            "license_url": "https://lbs.amap.com/pages/terms/",
+            "data_source": "Amap/AutoNavi",
         },
-        'Tencent.Terrain': {
-            'url_template': 'https://rt0.map.gtimg.com/realtimerender?z={z}&x={x}&y={y}&type=vector&style=8',
-            'tile_size': 256,
-            'requires_api_key': False,
-            'special_handling': None,
-            'description': 'Tencent terrain map',
-            'min_zoom': 0,
-            'max_zoom': 18,
-            'attribution': '© Tencent Maps',
-            'license_url': 'https://lbs.qq.com/terms.html',
-            'data_source': 'Tencent'
+        "Tencent.Terrain": {
+            "url_template": "https://rt0.map.gtimg.com/realtimerender?z={z}&x={x}&y={y}&type=vector&style=8",
+            "tile_size": 256,
+            "requires_api_key": False,
+            "special_handling": None,
+            "description": "Tencent terrain map",
+            "min_zoom": 0,
+            "max_zoom": 18,
+            "attribution": "© Tencent Maps",
+            "license_url": "https://lbs.qq.com/terms.html",
+            "data_source": "Tencent",
         },
-        'Tianditu.Vector': {
-            'url_template': 'https://t0.tianditu.gov.cn/DataServer?T=vec_w&x={x}&y={y}&l={z}&tk={api_key}',
-            'tile_size': 256,
-            'requires_api_key': True,
-            'api_env': 'TIANDITU_TOKEN',
-            'special_handling': None,
-            'description': 'Tianditu vector map (requires a free tk token from https://console.tianditu.gov.cn/api/key)',
-            'min_zoom': 0,
-            'max_zoom': 18,
-            'attribution': '© Tianditu',
-            'license_url': 'https://www.tianditu.gov.cn/',
-            'data_source': 'Tianditu',
-            'headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Referer': 'https://www.tianditu.gov.cn/'
-            }
+        "Tianditu.Vector": {
+            "url_template": "https://t0.tianditu.gov.cn/DataServer?T=vec_w&x={x}&y={y}&l={z}&tk={api_key}",
+            "tile_size": 256,
+            "requires_api_key": True,
+            "api_env": "TIANDITU_TOKEN",
+            "special_handling": None,
+            "description": "Tianditu vector map (requires a free tk token from https://console.tianditu.gov.cn/api/key)",
+            "min_zoom": 0,
+            "max_zoom": 18,
+            "attribution": "© Tianditu",
+            "license_url": "https://www.tianditu.gov.cn/",
+            "data_source": "Tianditu",
+            "headers": {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Referer": "https://www.tianditu.gov.cn/",
+            },
         },
-        'MapyCz.Outdoor': {
-            'url_template': 'https://mapserver.mapy.cz/turist-m/{z}-{x}-{y}',
-            'tile_size': 256,
-            'requires_api_key': False,
-            'special_handling': None,
-            'description': 'Mapy.cz outdoor topographic map',
-            'min_zoom': 0,
-            'max_zoom': 18,
-            'attribution': '© Mapy.cz, © Seznam.cz',
-            'license_url': 'https://mapy.cz/',
-            'data_source': 'Mapy.cz'
+        "MapyCz.Outdoor": {
+            "url_template": "https://mapserver.mapy.cz/turist-m/{z}-{x}-{y}",
+            "tile_size": 256,
+            "requires_api_key": False,
+            "special_handling": None,
+            "description": "Mapy.cz outdoor topographic map",
+            "min_zoom": 0,
+            "max_zoom": 18,
+            "attribution": "© Mapy.cz, © Seznam.cz",
+            "license_url": "https://mapy.cz/",
+            "data_source": "Mapy.cz",
         },
-        'Wikimedia': {
-            'url_template': 'https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png',
-            'tile_size': 256,
-            'requires_api_key': False,
-            'special_handling': None,
-            'description': 'Wikimedia Maps (OSM international style)',
-            'min_zoom': 0,
-            'max_zoom': 18,
-            'attribution': '© Wikimedia Maps, © OpenStreetMap contributors',
-            'license_url': 'https://www.openstreetmap.org/copyright',
-            'data_source': 'OpenStreetMap'
-        }
+        "Wikimedia": {
+            "url_template": "https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png",
+            "tile_size": 256,
+            "requires_api_key": False,
+            "special_handling": None,
+            "description": "Wikimedia Maps (OSM international style)",
+            "min_zoom": 0,
+            "max_zoom": 18,
+            "attribution": "© Wikimedia Maps, © OpenStreetMap contributors",
+            "license_url": "https://www.openstreetmap.org/copyright",
+            "data_source": "OpenStreetMap",
+        },
     }
 
     def __init__(
@@ -533,14 +539,16 @@ class RasterTileServer(BaseTileServer):
         # Resolve backward-compatible provider aliases (e.g., 'OSM' -> 'OSM.Standard').
         provider = self._PROVIDER_ALIASES.get(provider, provider)
 
-        requires_api_key = self._PROVIDERS.get(provider, {}).get('requires_api_key', False)
+        requires_api_key = self._PROVIDERS.get(provider, {}).get(
+            "requires_api_key", False
+        )
 
         if requires_api_key:
             if api_key is None:
                 api_key = self._REGISTERED_API_KEYS.get(provider)
 
             if api_key is None:
-                env_key = self._PROVIDERS[provider].get('api_env')
+                env_key = self._PROVIDERS[provider].get("api_env")
                 if env_key:
                     api_key = os.environ.get(env_key)
 
@@ -564,7 +572,9 @@ class RasterTileServer(BaseTileServer):
                 stacklevel=2,
             )
 
-    def check_accessibility(self, timeout: float = 10.0, z: int = 0, x: int = 0, y: int = 0) -> bool:
+    def check_accessibility(
+        self, timeout: float = 10.0, z: int = 0, x: int = 0, y: int = 0
+    ) -> bool:
         """Check whether the configured tile endpoint responds within a timeout."""
         if requests is None:
             warnings.warn(
@@ -575,7 +585,9 @@ class RasterTileServer(BaseTileServer):
 
         url = self._build_tile_url(z, x, y)
         try:
-            response = requests.get(url, headers=self._get_request_headers(), timeout=timeout)
+            response = requests.get(
+                url, headers=self._get_request_headers(), timeout=timeout
+            )
         except Exception as exc:  # pragma: no cover - depends on network conditions
             warnings.warn(
                 f"Tile server '{self.provider}' is not accessible at {url}: {exc}",
@@ -601,7 +613,7 @@ class RasterTileServer(BaseTileServer):
         (e.g., Bing) whose URL templates use a `{q}` placeholder instead of
         `{z}`/`{x}`/`{y}`.
         """
-        if self._config.get('url_type') == 'quadkey':
+        if self._config.get("url_type") == "quadkey":
             quadkey = self._to_quadkey(x, y, z)
             return self.get_url_template().format(q=quadkey)
         return super()._build_tile_url(z, x, y)
@@ -618,9 +630,11 @@ class RasterTileServer(BaseTileServer):
             if y & mask:
                 digit += 2
             digits.append(str(digit))
-        return ''.join(digits)
+        return "".join(digits)
 
-    def _normalize_tile_image(self, img: 'Image.Image', *, fallback_size: Optional[Tuple[int, int]] = None) -> 'Image.Image':
+    def _normalize_tile_image(
+        self, img: "Image.Image", *, fallback_size: Optional[Tuple[int, int]] = None
+    ) -> "Image.Image":
         """Return a valid image tile even when a provider sends a zero-sized or malformed payload."""
         target_size = fallback_size or (self.tile_size, self.tile_size)
 
@@ -630,7 +644,7 @@ class RasterTileServer(BaseTileServer):
                 UserWarning,
                 stacklevel=2,
             )
-            return Image.new('RGBA', target_size, (0, 0, 0, 0))
+            return Image.new("RGBA", target_size, (0, 0, 0, 0))
 
         try:
             width, height = img.size
@@ -643,10 +657,10 @@ class RasterTileServer(BaseTileServer):
                 UserWarning,
                 stacklevel=2,
             )
-            return Image.new('RGBA', target_size, (0, 0, 0, 0))
+            return Image.new("RGBA", target_size, (0, 0, 0, 0))
 
-        if img.mode != 'RGBA':
-            img = img.convert('RGBA')
+        if img.mode != "RGBA":
+            img = img.convert("RGBA")
 
         if img.size != target_size:
             warnings.warn(
@@ -656,12 +670,12 @@ class RasterTileServer(BaseTileServer):
             )
             img = img.resize(target_size, resample=Image.NEAREST)
 
-        if self._config.get('special_handling'):
+        if self._config.get("special_handling"):
             img = self._apply_special_handling(img)
 
         return img
 
-    def fetch_tile(self, z: int, x: int, y: int) -> 'Image.Image':
+    def fetch_tile(self, z: int, x: int, y: int) -> "Image.Image":
         """
         Fetch a single tile at the specified zoom level and tile coordinates.
 
@@ -701,23 +715,23 @@ class RasterTileServer(BaseTileServer):
                 f"Failed to fetch tile from {self.provider}: "
                 f"HTTP {response.status_code} - {url}"
             )
-        
+
     def provider_y(self, tile_y, tile_z):
-        tms_y_flip = self._config.get('tms_y_flip', False)
+        tms_y_flip = self._config.get("tms_y_flip", False)
         if tms_y_flip:
             return (1 << tile_z) - 1 - tile_y
         return tile_y
-    
+
     def fetch_tiles_for_extent(
         self,
         extent: List[float],
         zoom_level: Optional[int] = None,
         supersample: int = 0,
         resample: bool = True,
-        resample_method: str = 'lanczos',
+        resample_method: str = "lanczos",
         output_size: Optional[Tuple[int, int]] = None,
         output_dpi: int = 96,
-        quality_preference: str = 'balanced'
+        quality_preference: str = "balanced",
     ) -> np.ndarray:
         """
         Fetch and combine all tiles needed to cover the specified extent.
@@ -790,16 +804,20 @@ class RasterTileServer(BaseTileServer):
         # If super-sampling, downsample to target size
         if supersample > 0:
             # Calculate target size (what it would have been at original zoom)
-            original_x_min, original_y_min, original_x_max, original_y_max = \
+            original_x_min, original_y_min, original_x_max, original_y_max = (
                 self.extent_to_tile_indices(extent, zoom_level)
-            target_width = max(1, (original_x_max - original_x_min + 1) * self.tile_size)
-            target_height = max(1, (original_y_max - original_y_min + 1) * self.tile_size)
+            )
+            target_width = max(
+                1, (original_x_max - original_x_min + 1) * self.tile_size
+            )
+            target_height = max(
+                1, (original_y_max - original_y_min + 1) * self.tile_size
+            )
 
             # Downsample with high-quality filter (always use LANCZOS for downsampling)
-            resample_filter = self._get_resample_filter('lanczos')
+            resample_filter = self._get_resample_filter("lanczos")
             combined_img = combined_img.resize(
-                (target_width, target_height),
-                resample=resample_filter
+                (target_width, target_height), resample=resample_filter
             )
 
         # Apply resampling filter if requested and not already done
@@ -822,11 +840,11 @@ class RasterTileServer(BaseTileServer):
         zoom_level: Optional[int] = None,
         supersample: int = 0,
         resample: bool = True,
-        resample_method: str = 'lanczos',
+        resample_method: str = "lanczos",
         output_size: Optional[Tuple[int, int]] = None,
         output_dpi: int = 96,
-        quality_preference: str = 'balanced',
-    ) -> 'ManualBasemap':
+        quality_preference: str = "balanced",
+    ) -> "ManualBasemap":
         """Fetch + stitch tiles manually and return everything needed for imshow.
 
         Fully manual alternative to cartopy's ``add_image`` / ``image_for_domain``.
@@ -875,15 +893,19 @@ class RasterTileServer(BaseTileServer):
         # Derive the Web Mercator extent from the base-zoom tile grid so it matches
         # the stitched image exactly (supersample only changes resolution, not extent).
         x_min, y_min, x_max, y_max = self.extent_to_tile_indices(extent, zoom_level)
-        left, _, _, top = self._calculate_tile_extent_web_mercator(x_min, y_min, zoom_level)
-        _, right, bottom, _ = self._calculate_tile_extent_web_mercator(x_max, y_max, zoom_level)
+        left, _, _, top = self._calculate_tile_extent_web_mercator(
+            x_min, y_min, zoom_level
+        )
+        _, right, bottom, _ = self._calculate_tile_extent_web_mercator(
+            x_max, y_max, zoom_level
+        )
         mercator_extent = [left, right, bottom, top]
 
         return ManualBasemap(
             image=image,
             extent=mercator_extent,
             crs=ccrs.Mercator(),
-            origin='upper',
+            origin="upper",
             attribution=self.get_license_info(),
         )
 
@@ -896,7 +918,7 @@ class RasterTileServer(BaseTileServer):
         supersample: int = 0,
         zorder: Optional[int] = None,
         **fetch_kwargs,
-    ) -> 'ManualBasemap':
+    ) -> "ManualBasemap":
         """Render this provider's tiles on a cartopy axes using manual imshow.
 
         Friendly wrapper around :meth:`fetch_manual_basemap` that performs the
@@ -928,7 +950,7 @@ class RasterTileServer(BaseTileServer):
         )
         imshow_kwargs = {}
         if zorder is not None:
-            imshow_kwargs['zorder'] = zorder
+            imshow_kwargs["zorder"] = zorder
         ax.imshow(
             result.image,
             extent=result.extent,
@@ -939,9 +961,9 @@ class RasterTileServer(BaseTileServer):
         )
         return result
 
-    def get_cartopy_source(self, supersample: int = 0, 
-                           resample_method: str = 'lanczos'
-                           ) -> cimgt.GoogleTiles:
+    def get_cartopy_source(
+        self, supersample: int = 0, resample_method: str = "lanczos"
+    ) -> cimgt.GoogleTiles:
         """
         Get a Cartopy-compatible tile source with supersample support for use with ax.add_image().
 
@@ -970,42 +992,46 @@ class RasterTileServer(BaseTileServer):
         config = self._config
         api_key = self.api_key
         parent_instance = self
-        resample_filter = self._get_resample_filter(resample_method)               
+        resample_filter = self._get_resample_filter(resample_method)
 
-        class UnifiedTileSource(cimgt.GoogleTiles):         
+        class UnifiedTileSource(cimgt.GoogleTiles):
 
             def get_image(self, tile):
-                x, y, z = tile                
+                x, y, z = tile
+
                 def _safe_extent_for_tile(tile_x, tile_y, tile_z):
                     # Cartopy's merge uses exact equality for adjacent boundaries.
                     # Quantize the shared grid edges so floating-point roundoff does
                     # not create an extra coordinate column or row.
                     extent = BaseTileServer._calculate_tile_extent_web_mercator(
                         tile_x, tile_y, tile_z
-                    )                   
+                    )
                     return tuple(round(value, 6) for value in extent)
 
                 extent = _safe_extent_for_tile(x, y, z)
-                #print('extent before', extent)
-                max_zoom = config.get('max_zoom', 18)
+                # print('extent before', extent)
+                max_zoom = config.get("max_zoom", 18)
                 if z > max_zoom:
                     warnings.warn(
                         f"Cartopy requested zoom {z} for {provider}, but the provider maximum is {max_zoom}; using a transparent tile.",
                         UserWarning,
                         stacklevel=2,
                     )
-                    return Image.new(
-                        'RGBA',
-                        (parent_instance.tile_size, parent_instance.tile_size),
-                        (0, 0, 0, 0),
-                    ), extent, 'lower'
+                    return (
+                        Image.new(
+                            "RGBA",
+                            (parent_instance.tile_size, parent_instance.tile_size),
+                            (0, 0, 0, 0),
+                        ),
+                        extent,
+                        "lower",
+                    )
 
-            
                 # If no supersample requested, fetch directly with proper headers
                 # (the base class fetches via urllib without a User-Agent, which
                 # some providers such as Tianditu reject with HTTP 418)
                 if not supersample or supersample <= 0:
-                    fetch_y = parent_instance.provider_y(y, z)   # apply conditional flip
+                    fetch_y = parent_instance.provider_y(y, z)  # apply conditional flip
                     try:
                         img = parent_instance.fetch_tile(z, x, fetch_y)
                     except Exception as exc:
@@ -1015,20 +1041,24 @@ class RasterTileServer(BaseTileServer):
                             stacklevel=2,
                         )
                         img = Image.new(
-                            'RGBA',
+                            "RGBA",
                             (parent_instance.tile_size, parent_instance.tile_size),
                             (0, 0, 0, 0),
                         )
                     img = parent_instance._normalize_tile_image(img)
                     if img.size[0] <= 0 or img.size[1] <= 0:
-                        img = Image.new('RGBA', (parent_instance.tile_size, parent_instance.tile_size), (0, 0, 0, 0))
+                        img = Image.new(
+                            "RGBA",
+                            (parent_instance.tile_size, parent_instance.tile_size),
+                            (0, 0, 0, 0),
+                        )
                     extent = _safe_extent_for_tile(x, y, z)
-                    #print('extent after', extent)
-                    return img, extent, 'lower'
+                    # print('extent after', extent)
+                    return img, extent, "lower"
 
                 # Compute actual supersample level respecting provider max_zoom
                 fetch_z = z + supersample
-                max_zoom = config.get('max_zoom', 18)
+                max_zoom = config.get("max_zoom", 18)
                 actual_supersample = supersample
                 if fetch_z > max_zoom:
                     actual_supersample = max_zoom - z
@@ -1045,18 +1075,22 @@ class RasterTileServer(BaseTileServer):
                             stacklevel=2,
                         )
                         img = Image.new(
-                            'RGBA',
+                            "RGBA",
                             (parent_instance.tile_size, parent_instance.tile_size),
                             (0, 0, 0, 0),
                         )
                     img = parent_instance._normalize_tile_image(img)
                     if img.size[0] <= 0 or img.size[1] <= 0:
-                        img = Image.new('RGBA', (parent_instance.tile_size, parent_instance.tile_size), (0, 0, 0, 0))
+                        img = Image.new(
+                            "RGBA",
+                            (parent_instance.tile_size, parent_instance.tile_size),
+                            (0, 0, 0, 0),
+                        )
                     extent = _safe_extent_for_tile(x, y, z)
-                    print('extent after', extent)
-                    return img, extent, 'lower'
+                    print("extent after", extent)
+                    return img, extent, "lower"
 
-                scale = 2 ** actual_supersample
+                scale = 2**actual_supersample
 
                 # Fetch all high-res tiles and ensure RGBA
                 tiles = []
@@ -1066,10 +1100,21 @@ class RasterTileServer(BaseTileServer):
                         fetch_x = x * scale + dx
                         fetch_y = parent_instance.provider_y(y * scale + dy, fetch_z)
                         try:
-                            high_res_tile = parent_instance.fetch_tile(fetch_z, fetch_x, fetch_y)
-                            high_res_tile = parent_instance._normalize_tile_image(high_res_tile)
+                            high_res_tile = parent_instance.fetch_tile(
+                                fetch_z, fetch_x, fetch_y
+                            )
+                            high_res_tile = parent_instance._normalize_tile_image(
+                                high_res_tile
+                            )
                             if high_res_tile.size[0] <= 0 or high_res_tile.size[1] <= 0:
-                                high_res_tile = Image.new('RGBA', (parent_instance.tile_size, parent_instance.tile_size), (0, 0, 0, 0))
+                                high_res_tile = Image.new(
+                                    "RGBA",
+                                    (
+                                        parent_instance.tile_size,
+                                        parent_instance.tile_size,
+                                    ),
+                                    (0, 0, 0, 0),
+                                )
                             row.append(high_res_tile)
                         except Exception:
                             warnings.warn(
@@ -1077,15 +1122,25 @@ class RasterTileServer(BaseTileServer):
                                 UserWarning,
                                 stacklevel=2,
                             )
-                            blank = Image.new('RGBA', (parent_instance.tile_size, parent_instance.tile_size), (0, 0, 0, 0))
+                            blank = Image.new(
+                                "RGBA",
+                                (parent_instance.tile_size, parent_instance.tile_size),
+                                (0, 0, 0, 0),
+                            )
                             row.append(blank)
                     tiles.append(row)
 
                 if tiles and tiles[0]:
                     actual_tile_size = tiles[0][0].size[0]
-                    combined_img = parent_instance.combine_tiles(tiles, actual_tile_size)
+                    combined_img = parent_instance.combine_tiles(
+                        tiles, actual_tile_size
+                    )
                 else:
-                    combined_img = Image.new('RGBA', (parent_instance.tile_size, parent_instance.tile_size), (0, 0, 0, 0))
+                    combined_img = Image.new(
+                        "RGBA",
+                        (parent_instance.tile_size, parent_instance.tile_size),
+                        (0, 0, 0, 0),
+                    )
 
                 if combined_img.size[0] <= 0 or combined_img.size[1] <= 0:
                     warnings.warn(
@@ -1093,24 +1148,27 @@ class RasterTileServer(BaseTileServer):
                         UserWarning,
                         stacklevel=2,
                     )
-                    combined_img = Image.new('RGBA', (parent_instance.tile_size, parent_instance.tile_size), (0, 0, 0, 0))
+                    combined_img = Image.new(
+                        "RGBA",
+                        (parent_instance.tile_size, parent_instance.tile_size),
+                        (0, 0, 0, 0),
+                    )
 
                 # Downsample to target tile size
                 target_size = max(1, parent_instance.tile_size)
-                combined_img = combined_img.resize((target_size, target_size), resample=resample_filter)
+                combined_img = combined_img.resize(
+                    (target_size, target_size), resample=resample_filter
+                )
 
                 # Compute tile extent geometrically (no network fetch)
                 extent = _safe_extent_for_tile(x, y, z)
-                print('extent after', extent)
-                return combined_img, extent, 'lower'
+                print("extent after", extent)
+                return combined_img, extent, "lower"
 
         return UnifiedTileSource()
 
     def get_projected_extent(
-        self,
-        extent: List[float],
-        zoom_level: int,
-        source_crs=None
+        self, extent: List[float], zoom_level: int, source_crs=None
     ) -> Tuple[List[float], Any]:
         """
         Get the projected extent for tile fetching from a lat/lon extent.
@@ -1136,8 +1194,8 @@ class RasterTileServer(BaseTileServer):
             >>> tile_source = server.get_cartopy_source()
             >>> _, img_extent, _ = tile_source.image_for_domain(geom, zoom_level)
         """
-        import shapely.geometry as sgeom
         import cartopy.crs as ccrs
+        import shapely.geometry as sgeom
 
         # Default to PlateCarree (lat/lon) if not specified
         if source_crs is None:
@@ -1153,14 +1211,18 @@ class RasterTileServer(BaseTileServer):
 
         # Project geometry from source CRS to tile CRS (Web Mercator)
         multi_poly = tile_source.crs.project_geometry(ll_target_domain, source_crs)
-        target_domain = multi_poly.geoms[0] if hasattr(multi_poly, 'geoms') else multi_poly
+        target_domain = (
+            multi_poly.geoms[0] if hasattr(multi_poly, "geoms") else multi_poly
+        )
 
         # Get the extent in the projected CRS
         _, projected_extent, _ = tile_source.image_for_domain(target_domain, zoom_level)
 
         return projected_extent, target_domain
 
-    def get_license_info(self, year: Optional[str] = None, include_url: bool = False) -> str:
+    def get_license_info(
+        self, year: Optional[str] = None, include_url: bool = False
+    ) -> str:
         """
         Get the license/attribution information for the tile provider.
 
@@ -1194,8 +1256,8 @@ class RasterTileServer(BaseTileServer):
         if year is None:
             year = str(datetime.now().year)
 
-        attribution = self._config.get('attribution', 'Map tiles')
-        license_url = self._config.get('license_url', '')
+        attribution = self._config.get("attribution", "Map tiles")
+        license_url = self._config.get("license_url", "")
 
         # Add year to attribution
         license_info = f"{attribution} ({year})"
@@ -1211,7 +1273,7 @@ class RasterTileServer(BaseTileServer):
         extent: List[float],
         output_dpi: int = 150,
         output_size: Optional[Tuple[int, int]] = None,
-        quality_preference: str = 'balanced'
+        quality_preference: str = "balanced",
     ) -> int:
         """Return the default auto-selected zoom for a given extent.
 
@@ -1233,7 +1295,7 @@ class RasterTileServer(BaseTileServer):
         extent: List[float],
         output_dpi: int = 150,
         output_size: Optional[Tuple[int, int]] = None,
-        quality_preference: str = 'balanced'
+        quality_preference: str = "balanced",
     ) -> int:
         """
         Suggest optimal zoom level based on output requirements and quality preference.
@@ -1244,7 +1306,9 @@ class RasterTileServer(BaseTileServer):
             output_size = (1200, 1200)
 
         # Calculate base zoom using existing method
-        scale_denominator = self.calculate_scale_denominator(extent, output_size, output_dpi)
+        scale_denominator = self.calculate_scale_denominator(
+            extent, output_size, output_dpi
+        )
         pSrc = osr.SpatialReference()
         pSrc.ImportFromEPSG(3857)  # Web Mercator
         projection_wkt = pSrc.ExportToWkt()
@@ -1254,15 +1318,11 @@ class RasterTileServer(BaseTileServer):
             projection_wkt,
             dpi=output_dpi,
             tile_width=self.tile_size,
-            tile_height=self.tile_size
+            tile_height=self.tile_size,
         )
 
         # Adjust based on quality preference
-        quality_adjustments = {
-            'fast': -1,
-            'balanced': 0,
-            'quality': +2
-        }
+        quality_adjustments = {"fast": -1, "balanced": 0, "quality": +2}
 
         adjustment = quality_adjustments.get(quality_preference.lower(), 0)
 
@@ -1273,11 +1333,11 @@ class RasterTileServer(BaseTileServer):
         suggested_zoom = base_zoom + adjustment
 
         # Clamp to provider's zoom range
-        min_zoom = self._config.get('min_zoom', 0)
-        max_zoom = self._config.get('max_zoom', 18)
+        min_zoom: int = int(self._config.get("min_zoom", 0))
+        max_zoom: int = int(self._config.get("max_zoom", 18))
         suggested_zoom = max(min_zoom, min(max_zoom, suggested_zoom))
 
-        return suggested_zoom
+        return int(suggested_zoom)
 
     def _get_request_headers(self) -> Dict[str, str]:
         """Return HTTP headers used for tile requests.
@@ -1287,23 +1347,23 @@ class RasterTileServer(BaseTileServer):
         default, and providers may supply custom 'headers' in their config.
         """
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                          'AppleWebKit/537.36 (KHTML, like Gecko) '
-                          'Chrome/120.0.0.0 Safari/537.36'
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/120.0.0.0 Safari/537.36"
         }
-        headers.update(self._config.get('headers') or {})
+        headers.update(self._config.get("headers") or {})
         return headers
 
-    def _apply_special_handling(self, img: 'Image.Image') -> 'Image.Image':
+    def _apply_special_handling(self, img: "Image.Image") -> "Image.Image":
         """Apply provider-specific image processing."""
-        handling = self._config.get('special_handling')
+        handling = self._config.get("special_handling")
 
-        if handling == 'make_black_transparent':
+        if handling == "make_black_transparent":
             # Convert black pixels to transparent (used for Esri.Hydro)
-            img = img.convert('RGBA')
-            datas = img.getdata()
+            img = img.convert("RGBA")
+            data = img.getdata()
             new_data = []
-            for item in datas:
+            for item in data:
                 # Change all black pixels to transparent
                 if item[0] == 0 and item[1] == 0 and item[2] == 0:
                     new_data.append((0, 0, 0, 0))
@@ -1313,19 +1373,25 @@ class RasterTileServer(BaseTileServer):
 
         return img
 
-    def _validate_zoom_level(self, zoom_level: int, supersample: int = 0) -> Tuple[int, int]:
+    def _validate_zoom_level(
+        self, zoom_level: int, supersample: int = 0
+    ) -> Tuple[int, int]:
         """Validate and adjust zoom + supersample against provider limits.
 
         Returns (fetch_zoom, adjusted_supersample).
         """
         fetch_zoom = zoom_level + supersample
-        min_zoom = self._config.get('min_zoom', 0)
-        max_zoom = self._config.get('max_zoom', 18)
+        min_zoom = self._config.get("min_zoom", 0)
+        max_zoom = self._config.get("max_zoom", 18)
 
         if zoom_level < min_zoom:
-            raise ValueError(f"{self.provider} does not support zoom level {zoom_level}. Minimum supported zoom is {min_zoom}.")
+            raise ValueError(
+                f"{self.provider} does not support zoom level {zoom_level}. Minimum supported zoom is {min_zoom}."
+            )
         if zoom_level > max_zoom:
-            raise ValueError(f"{self.provider} does not support zoom level {zoom_level}. Maximum supported zoom is {max_zoom}.")
+            raise ValueError(
+                f"{self.provider} does not support zoom level {zoom_level}. Maximum supported zoom is {max_zoom}."
+            )
 
         if fetch_zoom > max_zoom:
             original_supersample = supersample
@@ -1341,9 +1407,7 @@ class RasterTileServer(BaseTileServer):
     # --- Class methods ---
     @classmethod
     def extent_to_tile_indices(
-        cls,
-        extent: List[float],
-        zoom: int
+        cls, extent: List[float], zoom: int
     ) -> Tuple[int, int, int, int]:
         """
         Convert extent (minx, maxx, miny, maxy) to tile indices at a given zoom level.
@@ -1355,27 +1419,22 @@ class RasterTileServer(BaseTileServer):
         x_max, y_min = cls.lonlat_to_tile(maxx, maxy, zoom)
         return x_min, y_min, x_max, y_max
 
-    @classmethod    
+    @classmethod
     def lonlat_to_tile(cls, lon: float, lat: float, zoom: int) -> Tuple[int, int]:
         """
         Convert longitude and latitude to tile indices at a given zoom level.
         """
         lat_rad = math.radians(lat)
-        n = 2.0 ** zoom
+        n = 2.0**zoom
         x_tile = int((lon + 180.0) / 360.0 * n)
-        y_tile = int(
-            (1.0 - math.asinh(math.tan(lat_rad)) / math.pi)
-            * (n/2.0)
-        )
+        y_tile = int((1.0 - math.asinh(math.tan(lat_rad)) / math.pi) * (n / 2.0))
         return x_tile, y_tile
-
 
     # --- Static / utility methods ---
     @staticmethod
     def combine_tiles(
-        tiles: List[List['Image.Image']],
-        tile_size: int
-    ) -> 'Image.Image':
+        tiles: List[List["Image.Image"]], tile_size: int
+    ) -> "Image.Image":
         """
         Combine a 2D array of tile images into a single image.
 
@@ -1391,7 +1450,7 @@ class RasterTileServer(BaseTileServer):
                 UserWarning,
                 stacklevel=2,
             )
-            return Image.new('RGBA', (tile_size, tile_size), (0, 0, 0, 0))
+            return Image.new("RGBA", (tile_size, tile_size), (0, 0, 0, 0))
 
         max_cols = max((len(row) for row in tiles), default=0)
         if max_cols <= 0:
@@ -1400,7 +1459,7 @@ class RasterTileServer(BaseTileServer):
                 UserWarning,
                 stacklevel=2,
             )
-            return Image.new('RGBA', (tile_size, tile_size), (0, 0, 0, 0))
+            return Image.new("RGBA", (tile_size, tile_size), (0, 0, 0, 0))
 
         width = max(1, max_cols * tile_size)
         height = max(1, len(tiles) * tile_size)
@@ -1410,9 +1469,9 @@ class RasterTileServer(BaseTileServer):
                 UserWarning,
                 stacklevel=2,
             )
-            return Image.new('RGBA', (tile_size, tile_size), (0, 0, 0, 0))
+            return Image.new("RGBA", (tile_size, tile_size), (0, 0, 0, 0))
 
-        combined_img = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+        combined_img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
 
         for row_index, row in enumerate(tiles):
             for col_index in range(max_cols):
@@ -1423,7 +1482,7 @@ class RasterTileServer(BaseTileServer):
                         UserWarning,
                         stacklevel=2,
                     )
-                    tile = Image.new('RGBA', (tile_size, tile_size), (0, 0, 0, 0))
+                    tile = Image.new("RGBA", (tile_size, tile_size), (0, 0, 0, 0))
                 combined_img.paste(tile, (col_index * tile_size, row_index * tile_size))
 
         return combined_img
@@ -1453,7 +1512,9 @@ class RasterTileServer(BaseTileServer):
         return zoom_level
 
     @staticmethod
-    def _calculate_tile_extent_web_mercator(x: int, y: int, z: int) -> Tuple[float, float, float, float]:
+    def _calculate_tile_extent_web_mercator(
+        x: int, y: int, z: int
+    ) -> Tuple[float, float, float, float]:
         """
         Calculate the Web Mercator extent for a tile at given coordinates.
 
@@ -1461,7 +1522,7 @@ class RasterTileServer(BaseTileServer):
         from the parent class. Web Mercator (EPSG:3857) bounds are ±20037508.34 meters.
         """
         world_extent = 20037508.342789244  # Web Mercator world extent
-        tile_width = (2 * world_extent) / (2 ** z)
+        tile_width = (2 * world_extent) / (2**z)
 
         min_x = -world_extent + (x * tile_width)
         max_x = min_x + tile_width
@@ -1484,12 +1545,9 @@ class RasterTileServer(BaseTileServer):
             raise ImportError("PIL/Pillow is required for resampling operations")
 
         filters = {
-            'lanczos': Image.LANCZOS,
-            'bicubic': Image.BICUBIC,
-            'bilinear': Image.BILINEAR,
-            'nearest': Image.NEAREST
+            "lanczos": Image.LANCZOS,
+            "bicubic": Image.BICUBIC,
+            "bilinear": Image.BILINEAR,
+            "nearest": Image.NEAREST,
         }
         return filters.get(method.lower(), Image.LANCZOS)
-
-
-

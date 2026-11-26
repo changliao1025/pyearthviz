@@ -1,8 +1,6 @@
-import numpy as np
-
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-
+import numpy as np
 
 from pyearthviz.color.create_diverge_rgb_color_hex import (
     create_diverge_rgb_color_hex,
@@ -40,6 +38,7 @@ def plot3d_time_series_data_fill(
     sLabel_z_in=None,
     sLabel_legend_in=None,
     sTitle_in=None,
+    dMissing_value_in=None,
 ):
 
     if iDPI_in is not None:
@@ -139,6 +138,11 @@ def plot3d_time_series_data_fill(
     verts = []
     ys = range(nslice)
     z_level = dMin_z
+    if dMissing_value_in is not None:
+        missing_value = dMissing_value_in
+    else:
+        missing_value = -9999
+
     for iSlice in np.arange(1, nslice + 1, 1):
         xs = mpl.dates.date2num(aTime_all[iSlice - 1])
         aData = aData_all[iSlice - 1]

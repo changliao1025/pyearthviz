@@ -1,12 +1,13 @@
 from datetime import datetime
-import numpy as np
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
 
+from pyearthviz.color.choose_n_color import polylinear_gradient, rand_hex_color
 from pyearthviz.color.create_diverge_rgb_color_hex import (
     create_diverge_rgb_color_hex,
 )
-from pyearthviz.color.choose_n_color import polylinear_gradient, rand_hex_color
 
 
 def plot_time_series_data_w_variation(
@@ -39,6 +40,7 @@ def plot_time_series_data_w_variation(
     sFormat_y_in=None,
     sLocation_legend_in=None,
     sTitle_in=None,
+    dMissing_value_in=None,
 ):
     # find how many data will be plotted
     aTime_all = np.array(aTime_all)
@@ -245,6 +247,10 @@ def plot_time_series_data_w_variation(
     sYear_format = mpl.dates.DateFormatter("%Y")
 
     # start loop for each data
+    if dMissing_value_in is not None:
+        missing_value = dMissing_value_in
+    else:
+        missing_value = -9999
 
     for iax in range(len(ax_all)):
         ax = ax_all[iax]
@@ -293,7 +299,7 @@ def plot_time_series_data_w_variation(
                     x2 = [datetime.fromtimestamp(i) for i in x2]
                     ax.plot(x2, y2, color="orange", linestyle="-.", linewidth=0.5)
 
-        # unqiue setting
+        # unique setting
         if iax == 0:
             ax.axis("on")
             ax.grid(which="major", color="grey", linestyle="--", axis="y")
@@ -316,7 +322,7 @@ def plot_time_series_data_w_variation(
                     nlabel = int((dMax_y - dMin_y) / dSpace_y) + 1
                     for i in np.arange(0, nlabel, 1):
                         ii = int(dMin_y) + i * dSpace_y
-                        sTicklabel = r"$10^{{{}}}$".format(int(ii))
+                        sTicklabel = rf"$10^{{{int(ii)}}}$"
                         aLabel_y.append(sTicklabel)
                         pass
                     ticks = np.arange(0, nlabel, 1) * dSpace_y + int(dMin_y)
@@ -328,7 +334,7 @@ def plot_time_series_data_w_variation(
                     for i in np.arange(0, nlabel, 1):
                         ii = int(dMin_y) + i * dSpace_y
                         iii = sFormat_y.format(ii)
-                        sTicklabel = r"$10^{{{}}}$".format(iii)
+                        sTicklabel = rf"$10^{{{iii}}}$"
                         aLabel_y.append(sTicklabel)
                         pass
                     ticks = np.arange(0, nlabel, 1) * dSpace_y + dMin_y
@@ -387,7 +393,7 @@ def plot_time_series_data_w_variation(
                     nlabel = int((dMax_y - dMin_y) / dSpace_y_mini) + 1
                     for i in np.arange(0, nlabel, 1):
                         ii = int(dMin_y) + i * dSpace_y_mini
-                        sTicklabel = r"$10^{{{}}}$".format(int(ii))
+                        sTicklabel = rf"$10^{{{int(ii)}}}$"
                         aLabel_y.append(sTicklabel)
                         pass
                     ticks = np.arange(0, nlabel, 1) * dSpace_y_mini + int(dMin_y)
@@ -398,7 +404,7 @@ def plot_time_series_data_w_variation(
                     for i in np.arange(0, nlabel, 1):
                         ii = int(dMin_y) + i * dSpace_y_mini
                         iii = sFormat_y.format(ii)
-                        sTicklabel = r"$10^{{{}}}$".format(iii)
+                        sTicklabel = rf"$10^{{{iii}}}$"
                         aLabel_y.append(sTicklabel)
                         pass
                     ticks = np.arange(0, nlabel, 1) * dSpace_y_mini + dMin_y

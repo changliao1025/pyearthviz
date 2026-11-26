@@ -1,9 +1,8 @@
 from datetime import datetime
-import numpy as np
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-
-
+import numpy as np
 
 
 def plot_time_series_data_with_two_y_axis(
@@ -24,6 +23,7 @@ def plot_time_series_data_with_two_y_axis(
     aLabel_y_in=None,
     aLabel_legend_in=None,
     sTitle_in=None,
+    dMissing_value_in=None,
 ):
     nData = len(aData_all)
     aData = [aData_all]
@@ -114,6 +114,11 @@ def plot_time_series_data_with_two_y_axis(
     pYear = mpl.dates.YearLocator(1)  # every year
     pMonth = mpl.dates.MonthLocator()  # every month
     sYear_format = mpl.dates.DateFormatter("%Y")
+    if dMissing_value_in is not None:
+        missing_value = dMissing_value_in
+    else:
+        missing_value = -9999
+
     # plot the first axis
     i = 1
     x1 = aTime_all[i - 1]

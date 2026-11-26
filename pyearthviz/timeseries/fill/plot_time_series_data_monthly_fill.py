@@ -1,8 +1,8 @@
-import numpy as np
 from datetime import datetime
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
 
 from pyearthviz.calculate_ticks_space import calculate_ticks_space
 
@@ -22,6 +22,7 @@ def plot_time_series_data_monthly_fill(
     sLabel_Y_in=None,
     sLabel_legend_in=None,
     sTitle_in=None,
+    dMissing_value_in=None,
 ):
 
     if iDPI_in is not None:
@@ -65,6 +66,11 @@ def plot_time_series_data_monthly_fill(
         sMarker = sMarker_in
     else:
         sMarker = "+"
+
+    if dMissing_value_in is not None:
+        missing_value = dMissing_value_in
+    else:
+        missing_value = -9999
 
     nstress = len(aTime)
     nan_index = np.where(aData == missing_value)

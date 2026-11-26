@@ -1,6 +1,6 @@
-import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
 
 from pyearthviz.color.create_diverge_rgb_color_hex import (
     create_diverge_rgb_color_hex,
@@ -130,7 +130,7 @@ def barplot_data_stacked(
     for i in np.arange(1, nData + 1, 1):
 
         data1 = aData_in[i - 1]
-        # need bettern control here, hatch (texture) can be used to betten represet some data
+        # need better control here, hatch (texture) can be used to betten represent some data
         if i == 1 or i == 2:
             rects = ax.bar(
                 x - total_width * 0.5 + i * width,

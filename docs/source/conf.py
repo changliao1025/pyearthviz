@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Read the Docs Template documentation build configuration file, created by
 # sphinx-quickstart on Tue Aug 26 14:19:49 2014.
@@ -12,14 +11,16 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sys
 import os
+import sys
+
 import tomli
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 # sys.path.insert(0, os.path.abspath('.'))
+
 
 # Read version from pyproject.toml
 def get_version():
@@ -31,21 +32,25 @@ def get_version():
         # Use tomllib for Python >= 3.11
         import tomllib as toml_lib
 
-    pyproject_path = os.path.join(os.path.dirname(__file__), '..', '..', 'pyproject.toml')
-    with open(pyproject_path, 'rb') as f:
+    pyproject_path = os.path.join(
+        os.path.dirname(__file__), "..", "..", "pyproject.toml"
+    )
+    with open(pyproject_path, "rb") as f:
         pyproject_data = toml_lib.load(f)
-    return pyproject_data['project']['version']
+    return pyproject_data["project"]["version"]
+
 
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
 # needs_sphinx = '1.0'
 
-import subprocess, os
+import os
+import subprocess
 
 
 def configureDoxyfile(input_dir, output_dir):
-    with open("Doxyfile.in", "r") as file:
+    with open("Doxyfile.in") as file:
         filedata = file.read()
 
     filedata = filedata.replace("@DOXYGEN_INPUT_DIR@", input_dir)
@@ -233,7 +238,7 @@ htmlhelp_basename = "pyearthvizdoc"
 
 # -- Options for LaTeX output ---------------------------------------------
 
-latex_elements = {
+latex_elements: dict[str, str] = {
     # The paper size ('letterpaper' or 'a4paper').
     #'papersize': 'letterpaper',
     # The font size ('10pt', '11pt' or '12pt').

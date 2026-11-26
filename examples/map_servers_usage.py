@@ -5,8 +5,10 @@ This script demonstrates the new unified API for working with tile servers.
 """
 
 import os
-import matplotlib.pyplot as plt
+
 import cartopy.crs as ccrs
+import matplotlib.pyplot as plt
+
 from pyearthviz.map.raster_map_servers import RasterTileServer
 
 
@@ -17,7 +19,7 @@ def example_basic_usage():
     print("=" * 60)
 
     # Create a tile server instance
-    server = RasterTileServer('Esri.Terrain')
+    server = RasterTileServer("Esri.Terrain")
     print(f"Created: {server}")
     print(f"Tile size: {server.tile_size} pixels")
     print(f"URL template: {server.get_url_template()}")
@@ -34,9 +36,11 @@ def example_list_providers():
     print(f"Available providers ({len(providers)} total):")
     for provider in providers:
         info = RasterTileServer.get_provider_info(provider)
-        api_key_required = "Yes" if info['requires_api_key'] else "No"
-        print(f"  - {provider:25s} | Tile: {info['tile_size']}x{info['tile_size']} | "
-              f"API Key: {api_key_required:3s} | {info['description']}")
+        api_key_required = "Yes" if info["requires_api_key"] else "No"
+        print(
+            f"  - {provider:25s} | Tile: {info['tile_size']}x{info['tile_size']} | "
+            f"API Key: {api_key_required:3s} | {info['description']}"
+        )
     print()
 
 
@@ -46,7 +50,7 @@ def example_fetch_single_tile():
     print("Example 3: Fetch Single Tile")
     print("=" * 60)
 
-    server = RasterTileServer('Esri.Terrain')
+    server = RasterTileServer("Esri.Terrain")
 
     # Fetch a tile for San Francisco area
     # Zoom 10, tile coordinates for SF
@@ -55,7 +59,7 @@ def example_fetch_single_tile():
         print(f"Fetched tile: {tile.size} pixels, mode: {tile.mode}")
 
         # Save the tile
-        output_file = '/tmp/example_tile.png'
+        output_file = "/tmp/example_tile.png"
         tile.save(output_file)
         print(f"Saved tile to: {output_file}")
     except Exception as e:
@@ -69,7 +73,7 @@ def example_fetch_extent():
     print("Example 4: Fetch Tiles for Extent")
     print("=" * 60)
 
-    server = RasterTileServer('Esri.WorldImagery')
+    server = RasterTileServer("Esri.WorldImagery")
 
     # San Francisco area extent [minx, maxx, miny, maxy]
     extent = [-122.5, -122.3, 37.7, 37.8]
@@ -83,11 +87,11 @@ def example_fetch_extent():
         # Display using matplotlib
         fig, ax = plt.subplots(figsize=(10, 8))
         ax.imshow(image_array)
-        ax.set_title(f'San Francisco Area\n{server.provider} - Zoom {zoom_level}')
-        ax.axis('off')
+        ax.set_title(f"San Francisco Area\n{server.provider} - Zoom {zoom_level}")
+        ax.axis("off")
 
-        output_file = '/tmp/example_extent.png'
-        plt.savefig(output_file, dpi=150, bbox_inches='tight')
+        output_file = "/tmp/example_extent.png"
+        plt.savefig(output_file, dpi=150, bbox_inches="tight")
         print(f"Saved map to: {output_file}")
         plt.close()
     except Exception as e:
@@ -109,18 +113,18 @@ def example_cartopy_integration():
     ax.set_extent([-122.6, -122.2, 37.6, 37.9], crs=ccrs.PlateCarree())
 
     # Add tile server as background
-    server = RasterTileServer('Esri.Terrain')
+    server = RasterTileServer("Esri.Terrain")
     try:
         ax.add_image(server.get_cartopy_source(), 11)
 
         # Add some features
-        ax.coastlines(resolution='10m', color='red', linewidth=2)
+        ax.coastlines(resolution="10m", color="red", linewidth=2)
         ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False)
 
-        plt.title(f'San Francisco Bay Area\nUsing {server.provider}', fontsize=14)
+        plt.title(f"San Francisco Bay Area\nUsing {server.provider}", fontsize=14)
 
-        output_file = '/tmp/example_cartopy.png'
-        plt.savefig(output_file, dpi=150, bbox_inches='tight')
+        output_file = "/tmp/example_cartopy.png"
+        plt.savefig(output_file, dpi=150, bbox_inches="tight")
         print(f"Saved Cartopy map to: {output_file}")
         plt.close()
     except Exception as e:
@@ -135,10 +139,10 @@ def example_with_api_key():
     print("=" * 60)
 
     # Check if API key is available
-    api_key = os.environ.get('STADIA_API_KEY')
+    api_key = os.environ.get("STADIA_API_KEY")
 
     if api_key:
-        server = RasterTileServer('Stadia.StamenTerrain', api_key=api_key)
+        server = RasterTileServer("Stadia.StamenTerrain", api_key=api_key)
         print(f"Created: {server}")
         print("API key loaded from environment variable")
 
@@ -151,7 +155,7 @@ def example_with_api_key():
     else:
         print("STADIA_API_KEY environment variable not set")
         print("You can still create the server, but tile fetching will fail:")
-        server = RasterTileServer('Stadia.StamenTerrain')
+        server = RasterTileServer("Stadia.StamenTerrain")
         print(f"Created: {server}")
     print()
 
@@ -190,7 +194,7 @@ def example_compare_providers():
     extent = [-122.5, -122.3, 37.7, 37.8]
     zoom_level = 11
 
-    providers_to_compare = ['Esri.Terrain', 'Esri.Relief', 'Esri.WorldImagery']
+    providers_to_compare = ["Esri.Terrain", "Esri.Relief", "Esri.WorldImagery"]
 
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
 
@@ -201,20 +205,29 @@ def example_compare_providers():
 
             axes[idx].imshow(image_array)
             axes[idx].set_title(provider_name)
-            axes[idx].axis('off')
+            axes[idx].axis("off")
             print(f"Fetched {provider_name}: {image_array.shape}")
         except Exception as e:
             print(f"Error with {provider_name}: {e}")
-            axes[idx].text(0.5, 0.5, f'Error:\n{provider_name}',
-                          ha='center', va='center', transform=axes[idx].transAxes)
-            axes[idx].axis('off')
+            axes[idx].text(
+                0.5,
+                0.5,
+                f"Error:\n{provider_name}",
+                ha="center",
+                va="center",
+                transform=axes[idx].transAxes,
+            )
+            axes[idx].axis("off")
 
-    plt.suptitle('Comparison of Different Tile Providers\nSan Francisco Bay Area',
-                 fontsize=14, fontweight='bold')
+    plt.suptitle(
+        "Comparison of Different Tile Providers\nSan Francisco Bay Area",
+        fontsize=14,
+        fontweight="bold",
+    )
     plt.tight_layout()
 
-    output_file = '/tmp/example_provider_comparison.png'
-    plt.savefig(output_file, dpi=150, bbox_inches='tight')
+    output_file = "/tmp/example_provider_comparison.png"
+    plt.savefig(output_file, dpi=150, bbox_inches="tight")
     print(f"Saved comparison to: {output_file}")
     plt.close()
     print()
@@ -241,5 +254,5 @@ def main():
     print("=" * 60)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

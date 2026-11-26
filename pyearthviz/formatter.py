@@ -2,13 +2,13 @@ import matplotlib as mpl
 
 
 def log_formatter(x):
-    a, b = "{:.1e}".format(x).split("e")
+    a, b = f"{x:.1e}".split("e")
     b = int(b)
-    return r"${} \times 10^{{{}}}$".format(a, b)
+    return rf"${a} \times 10^{{{b}}}$"
 
 
 def float_formatter(x):
-    a = "{:.1f}".format(x)
+    a = f"{x:.1f}"
     return a
 
 
@@ -25,12 +25,12 @@ class MathTextSciFormatter(mpl.ticker.Formatter):
         sign = tup[1][0].replace(positive_sign, "")
         exponent = tup[1][1:].lstrip("0")
         if exponent:
-            exponent = "10^{%s%s}" % (sign, exponent)
+            exponent = f"10^{{{sign}{exponent}}}"
         if significand and exponent:
-            s = r"%s{\times}%s" % (significand, exponent)
+            s = rf"{significand}{{\times}}{exponent}"
         else:
-            s = r"%s%s" % (significand, exponent)
-        return "${}$".format(s)
+            s = rf"{significand}{exponent}"
+        return f"${s}$"
 
 
 class OOMFormatter(mpl.ticker.ScalarFormatter):

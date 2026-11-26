@@ -1,14 +1,16 @@
 import os
 import sys
-import numpy as np
 from datetime import datetime
-from osgeo import osr, ogr
+
+import cartopy as cpl
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
+from cartopy.mpl.gridliner import LATITUDE_FORMATTER, LONGITUDE_FORMATTER
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Polygon
-import cartopy as cpl
-from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
+from osgeo import ogr, osr
+
 from pyearthviz.formatter import OOMFormatter
 
 pProjection = cpl.crs.PlateCarree()  # for latlon data only
@@ -353,7 +355,7 @@ def map_netcdf_file(
             pDate0 = datetime(iYear, 1, 1)
             if iFlag_monthly == 1:
                 for iMonth in range(1, 13):
-                    sMonth = "{:02d}".format(iMonth)
+                    sMonth = f"{iMonth:02d}"
                     fig = plt.figure(dpi=iDPI)
                     fig.set_figwidth(iSize_x)
                     fig.set_figheight(iSize_y)
@@ -559,7 +561,7 @@ def map_netcdf_file(
                 )
 
                 for iStep in range(0, nTime):
-                    sStep = "{:03d}".format(iStep + 1)
+                    sStep = f"{iStep + 1:03d}"
                     fig = plt.figure(dpi=iDPI)
                     fig.set_figwidth(iSize_x)
                     fig.set_figheight(iSize_y)

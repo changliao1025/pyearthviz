@@ -1,17 +1,20 @@
-import os
 import json
-import numpy as np
-from osgeo import osr, gdal, ogr
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-import matplotlib.cm as cm
-from matplotlib import animation
+import os
+import shutil
+
 import cartopy.crs as ccrs
+import matplotlib.cm as cm
+import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib import animation
+from osgeo import gdal, ogr, osr
 from pyearth.gis.location.get_geometry_coordinates import get_geometry_coordinates
 
 pProjection = ccrs.PlateCarree()  # for latlon data only
 iFigwidth_default = 8
 iFigheight_default = 6
+
 
 def animate_vector_polygon_data(
     sFilename_mesh_in,
@@ -23,6 +26,8 @@ def animate_vector_polygon_data(
     aExtent_in=None,
     sTitle_in=None,
     pProjection_map_in=None,
+    sFfmpeg_path_in=None,
+    sConvert_path_in=None,
 ):
 
     if iFigwidth_in is None:
@@ -166,7 +171,7 @@ def animate_vector_polygon_data(
         fontsize=12,
     )
 
-    # trasform data
+    # transform data
     norm = plt.Normalize(dData_min, dData_max)
     sm = plt.cm.ScalarMappable(cmap=cmap_reversed, norm=norm)
     sm.set_array(aData)
@@ -249,21 +254,35 @@ def animate_vector_polygon_data(
     if os.path.exists(sFilename_animation_out):
         os.remove(sFilename_animation_out)
     if sFilename_animation_out.endswith(".gif"):
-        plt.rcParams["animation.convert_path"] = (
-            "/share/apps/ImageMagick/7.1.0-52/bin/convert"
+        convert_path = (
+            sConvert_path_in
+            or os.environ.get("CONVERT_PATH")
+            or os.environ.get("IMAGE_MAGICK_PATH")
+            or shutil.which("convert")
+            or shutil.which("magick")
         )
-        writer = "imagemagick"
+        if convert_path:
+            plt.rcParams["animation.convert_path"] = convert_path
+
+        if animation.ImageMagickWriter.isAvailable():
+            writer = "imagemagick"
+        elif animation.PillowWriter.isAvailable():
+            writer = "pillow"
+        else:
+            writer = "imagemagick"
+
         anim = animation.FuncAnimation(
             fig, animate, frames=ncell_animation, interval=400, blit=False
         )
         anim.save(sFilename_animation_out, writer=writer)
 
     else:  # use video instead
-        plt.rcParams["animation.ffmpeg_path"] = (
-            "/people/liao313/.conda/envs/pyflowline/bin/ffmpeg"  #'/share/apps/ffmpeg/6.1.1/bin/ffmpeg
+        ffmpeg_path = (
+            sFfmpeg_path_in or os.environ.get("FFMPEG_PATH") or shutil.which("ffmpeg")
         )
-        # Writer = animation.writers['ffmpeg']
-        # writer = Writer(fps=5, metadata=dict(artist='Chang Liao'), bitrate=-1)
+        if ffmpeg_path:
+            plt.rcParams["animation.ffmpeg_path"] = ffmpeg_path
+
         writer = animation.FFMpegWriter(
             fps=5, metadata=dict(artist="Chang Liao"), bitrate=-1
         )

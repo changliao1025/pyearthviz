@@ -1,11 +1,12 @@
-import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
 from pyearth.toolbox.data.list.list_alg import list_max, list_min
-from pyearthviz.scatter.scatter_lowess import scatter_lowess
+
 from pyearthviz.color.create_diverge_rgb_color_hex import (
     create_diverge_rgb_color_hex,
 )
+from pyearthviz.scatter.scatter_lowess import scatter_lowess
 
 
 def scatter_plot_multiple_data(
@@ -42,8 +43,8 @@ def scatter_plot_multiple_data(
 
     # aData_in = np.array(aData_y)
     try:
-        from scipy.stats import gaussian_kde
         from scipy import stats
+        from scipy.stats import gaussian_kde
     except ImportError as e:
         raise ImportError(
             "The package 'scipy' is required for this function to run."
@@ -264,12 +265,7 @@ def scatter_plot_multiple_data(
             if iax == 0:
                 aLegend_artist.append(sc)
                 slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
-                sR = (
-                    "slope:"
-                    + "{:.2f}".format(slope)
-                    + r"; $r^2$:"
-                    + "{:.2f}".format(r_value**2)
-                )
+                sR = "slope:" + f"{slope:.2f}" + r"; $r^2$:" + f"{r_value**2:.2f}"
                 aLabel.append(aLabel_legend[i] + ": " + sR)
 
                 if i == 0 and aLabel_point_in is not None:
@@ -328,7 +324,7 @@ def scatter_plot_multiple_data(
         if iFlag_log_x == 1:
             aLabel_x = []
             for i in np.arange(dMin_x, dMax_x + 1, 1):
-                sTicklabel = r"$10^{{{}}}$".format(int(i))
+                sTicklabel = rf"$10^{{{int(i)}}}$"
                 aLabel_x.append(sTicklabel)
                 pass
 
@@ -352,7 +348,7 @@ def scatter_plot_multiple_data(
         if iFlag_log_y == 1:
             aLabel_y = []
             for i in np.arange(dMin_y, dMax_y + 1, 1):
-                sTicklabel = r"$10^{{{}}}$".format(int(i))
+                sTicklabel = rf"$10^{{{int(i)}}}$"
                 aLabel_y.append(sTicklabel)
                 pass
 

@@ -19,17 +19,20 @@ def scatter_lowess(x, y, f=1.0 / 3.0):
     y_sm = np.zeros_like(y)
     y_stderr = np.zeros_like(y)
     # define the weigthing function -- clipping too!
-    tricube = lambda d: np.clip((1 - np.abs(d) ** 3) ** 3, 0, 1)
+
+    def tricube(d):
+        return np.clip((1 - np.abs(d) ** 3) ** 3, 0, 1)
+
     # run the regression for each observation i
     for i in range(N):
-        dist = np.abs((x[order][i] - x[order])) / xwidth
+        dist = np.abs(x[order][i] - x[order]) / xwidth
         w = tricube(dist)
         # form linear system with the weights
         A = np.stack([w, x[order] * w]).T
         b = w * y[order]
         ATA = A.T.dot(A)
         ATb = A.T.dot(b)
-        # solve the syste
+        # solve the system
         sol = np.linalg.solve(ATA, ATb)
         # predict for the observation only
         yest = A[i].dot(sol)  # equiv of A.dot(yest) just for k

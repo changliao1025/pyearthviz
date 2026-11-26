@@ -1,16 +1,15 @@
 import os
-import numpy as np
 
+import cartopy as cpl
+import cartopy.crs as ccrs
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import cartopy as cpl
-from osgeo import osr, gdal, ogr
-import cartopy.crs as ccrs
-from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
-
+import numpy as np
+from cartopy.mpl.gridliner import LATITUDE_FORMATTER, LONGITUDE_FORMATTER
+from osgeo import gdal, ogr, osr
 from pyearth.toolbox.data.cgpercentiles import cgpercentiles
-from pyearthviz.formatter import log_formatter
-from pyearthviz.formatter import OOMFormatter
+
+from pyearthviz.formatter import OOMFormatter, log_formatter
 from pyearthviz.map.zebra_frame import zebra_frame
 
 pProjection_default = cpl.crs.PlateCarree()

@@ -1,6 +1,6 @@
-import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
 
 from pyearthviz.color.create_diverge_rgb_color_hex import (
     create_diverge_rgb_color_hex,
@@ -166,10 +166,10 @@ def barplot_data_with_reference(
                     x1,
                     data1,
                     width,
-                    label=aLabel_y_in[k],
-                    linestyle=aLinestyle_in[k],
-                    color=aColor[k],
-                    hatch=aHatch[k],
+                    label=aLabel_y_in[j],
+                    linestyle=aLinestyle_in[j],
+                    color=aColor[j],
+                    hatch=aHatch[j],
                     edgecolor="k",
                 )
 

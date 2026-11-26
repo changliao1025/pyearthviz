@@ -1,6 +1,7 @@
-import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
+
 from pyearthviz.scatter.scatter_lowess import scatter_lowess
 
 
@@ -208,7 +209,7 @@ def scatter_plot_data(
     if iFlag_log_x == 1:
         aLabel_x = []
         for i in np.arange(dMin_x, dMax_x + 1, 1):
-            sTicklabel = r"$10^{{{}}}$".format(int(i))
+            sTicklabel = rf"$10^{{{int(i)}}}$"
             aLabel_x.append(sTicklabel)
             pass
 
@@ -228,7 +229,7 @@ def scatter_plot_data(
     if iFlag_log_y == 1:
         aLabel_y = []
         for i in np.arange(dMin_y, dMax_y + 1, 1):
-            sTicklabel = r"$10^{{{}}}$".format(int(i))
+            sTicklabel = rf"$10^{{{int(i)}}}$"
             aLabel_y.append(sTicklabel)
             pass
 
@@ -270,7 +271,7 @@ def scatter_plot_data(
     slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(x, y)
 
     print(slope, intercept, r_value, p_value, std_err)
-    sText = r"R: " + "{:.2f}".format(r_value)
+    sText = r"R: " + f"{r_value:.2f}"
     ax_scatter.text(
         0.05,
         0.95,
@@ -282,7 +283,7 @@ def scatter_plot_data(
         fontsize=12,
     )
 
-    sText = "P-value: " + "{:.2E}".format(p_value)
+    sText = "P-value: " + f"{p_value:.2E}"
     ax_scatter.text(
         0.05,
         0.9,

@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 from pyearthviz.map import RasterTileServer
 
-OUTPUT_DIR = os.path.join(os.path.dirname(__file__), 'test_outputs')
+OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "test_outputs")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 TEST_EXTENT = [97.8125, 101.19193115234378, 36.295833333333356, 38.31723395453561]
@@ -16,14 +16,16 @@ TEST_ZOOM = None
 
 def test_cartopy_resample():
     """Render the same map using multiple resampling methods."""
-    server = RasterTileServer('Esri.Terrain')
-    zoom_level = server.get_default_zoom(TEST_EXTENT) if TEST_ZOOM is None else TEST_ZOOM
+    server = RasterTileServer("Esri.Terrain")
+    zoom_level = (
+        server.get_default_zoom(TEST_EXTENT) if TEST_ZOOM is None else TEST_ZOOM
+    )
 
     for method, desc in [
-        ('lanczos', 'Lanczos (best quality)'),
-        ('bicubic', 'Bicubic (good quality)'),
-        ('bilinear', 'Bilinear (faster)'),
-        ('nearest', 'Nearest (fastest)'),
+        ("lanczos", "Lanczos (best quality)"),
+        ("bicubic", "Bicubic (good quality)"),
+        ("bilinear", "Bilinear (faster)"),
+        ("nearest", "Nearest (fastest)"),
     ]:
         fig = plt.figure(figsize=(8, 8))
         ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
@@ -37,18 +39,19 @@ def test_cartopy_resample():
 
         filename = f"resample_{method}.png"
         output_path = os.path.join(OUTPUT_DIR, filename)
-        plt.savefig(output_path, dpi=150, bbox_inches='tight')
+        plt.savefig(output_path, dpi=150, bbox_inches="tight")
         plt.close(fig)
 
-        assert os.path.exists(output_path), f'Missing output file: {output_path}'
+        assert os.path.exists(output_path), f"Missing output file: {output_path}"
     return True
 
-if __name__ == '__main__':
-    success = test_cartopy_resample() 
 
-    print("\n" + "="*60)
+if __name__ == "__main__":
+    success = test_cartopy_resample()
+
+    print("\n" + "=" * 60)
     if success:
         print("✓ All tests completed successfully!")
     else:
         print("✗ Some tests failed. Check output above.")
-    print("="*60)
+    print("=" * 60)
